@@ -836,6 +836,22 @@ export function LogCharts({ logs }: LogChartsProps) {
   const { validLogs, levelCounts, timelineDataCache, timeRange } = chartData;
   const currentTimelineData = timelineDataCache[selectedInterval] || [];
 
+  // ============================================================================
+  // CALCULATE ACCURATE ERROR RATES
+  // ============================================================================
+  
+  /**
+   * Calculate accurate error and warning rates
+   * Ensure we're using the correct total count and handling edge cases
+   */
+  const totalEntries = logs.length;
+  const errorCount = levelCounts.ERROR || 0;
+  const warningCount = levelCounts.WARN || 0;
+  
+  // Calculate percentages with proper error handling
+  const errorRate = totalEntries > 0 ? ((errorCount / totalEntries) * 100).toFixed(1) : '0.0';
+  const warningRate = totalEntries > 0 ? ((warningCount / totalEntries) * 100).toFixed(1) : '0.0';
+
   return (
     <div className="space-y-6">
       {/* ========================================================================
@@ -863,20 +879,20 @@ export function LogCharts({ logs }: LogChartsProps) {
       )}
 
       {/* ========================================================================
-          SUMMARY STATS (INCLUDING TRACE)
+          SUMMARY STATS (INCLUDING TRACE) WITH CORRECTED ERROR RATES
           ======================================================================== */}
       <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 transition-colors duration-200">
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-center">
           <div>
-            <div className="text-2xl font-bold text-gray-900 dark:text-white">{logs.length.toLocaleString()}</div>
+            <div className="text-2xl font-bold text-gray-900 dark:text-white">{totalEntries.toLocaleString()}</div>
             <div className="text-sm text-gray-500 dark:text-gray-400">Total Entries</div>
           </div>
           <div>
-            <div className="text-2xl font-bold text-red-600 dark:text-red-400">{(levelCounts.ERROR || 0).toLocaleString()}</div>
+            <div className="text-2xl font-bold text-red-600 dark:text-red-400">{errorCount.toLocaleString()}</div>
             <div className="text-sm text-gray-500 dark:text-gray-400">Errors</div>
           </div>
           <div>
-            <div className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">{(levelCounts.WARN || 0).toLocaleString()}</div>
+            <div className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">{warningCount.toLocaleString()}</div>
             <div className="text-sm text-gray-500 dark:text-gray-400">Warnings</div>
           </div>
           <div>
@@ -915,22 +931,24 @@ export function LogCharts({ logs }: LogChartsProps) {
         </div>
 
         {/* ====================================================================
-            ANALYSIS SUMMARY
+            ANALYSIS SUMMARY WITH CORRECTED ERROR RATES
             ==================================================================== */}
         <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 transition-colors duration-200">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Analysis Summary</h3>
           <div className="h-64 flex items-center justify-center">
             <div className="text-center space-y-4">
-              <div className="text-4xl font-bold text-blue-600 dark:text-blue-400">{logs.length.toLocaleString()}</div>
+              <div className="text-4xl font-bold text-blue-600 dark:text-blue-400">{totalEntries.toLocaleString()}</div>
               <div className="text-lg text-gray-700 dark:text-gray-300">Total Log Entries Analyzed</div>
               <div className="grid grid-cols-2 gap-4 mt-6">
                 <div className="text-center">
-                  <div className="text-2xl font-semibold text-red-600 dark:text-red-400">{((levelCounts.ERROR || 0) / logs.length * 100).toFixed(1)}%</div>
+                  <div className="text-2xl font-semibold text-red-600 dark:text-red-400">{errorRate}%</div>
                   <div className="text-sm text-gray-500 dark:text-gray-400">Error Rate</div>
+                  <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">({errorCount} errors)</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-2xl font-semibold text-yellow-600 dark:text-yellow-400">{((levelCounts.WARN || 0) / logs.length * 100).toFixed(1)}%</div>
+                  <div className="text-2xl font-semibold text-yellow-600 dark:text-yellow-400">{warningRate}%</div>
                   <div className="text-sm text-gray-500 dark:text-gray-400">Warning Rate</div>
+                  <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">({warningCount} warnings)</div>
                 </div>
               </div>
             </div>
