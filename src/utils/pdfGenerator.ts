@@ -2,6 +2,27 @@ import jsPDF from 'jspdf';
 import { LogEntry, LogSummary } from '../types/log';
 import { format } from 'date-fns';
 
+/**
+ * PDF Report Generator
+ * 
+ * This module handles the generation of comprehensive PDF reports from log analysis data.
+ * It creates professional, multi-page reports with charts, statistics, and actionable insights.
+ * 
+ * Features:
+ * - Professional report layout with consistent styling
+ * - Executive summary with key metrics
+ * - Visual charts and data representations
+ * - Critical error analysis
+ * - Actionable recommendations
+ * - Custom additional content from AI assistant
+ * 
+ * Security: All PDF generation happens client-side in the browser.
+ * No data is transmitted to external services.
+ */
+
+/**
+ * Options interface for PDF report generation
+ */
 interface PDFReportOptions {
   logs: LogEntry[];
   summary: LogSummary;
@@ -12,6 +33,14 @@ interface PDFReportOptions {
   additionalDetails?: string;
 }
 
+/**
+ * Main PDF report generation function
+ * 
+ * Creates a comprehensive PDF report from log analysis data and downloads it.
+ * Handles error cases and provides user feedback through exceptions.
+ * 
+ * @param options - Configuration object with all required data and settings
+ */
 export async function generatePDFReport(options: PDFReportOptions): Promise<void> {
   try {
     const pdf = await createPDFDocument(options);
@@ -28,10 +57,26 @@ export async function generatePDFReport(options: PDFReportOptions): Promise<void
   }
 }
 
+/**
+ * Create the PDF document with all content and formatting
+ * 
+ * This is the main document creation function that handles:
+ * - Page layout and styling
+ * - Content organization and flow
+ * - Professional formatting
+ * - Multi-page document structure
+ * 
+ * @param options - PDF generation options
+ * @returns Configured jsPDF document ready for download
+ */
 async function createPDFDocument(options: PDFReportOptions): Promise<jsPDF> {
   const { logs, summary, filename, additionalDetails } = options;
   
-  // Validate required data
+  // ============================================================================
+  // INPUT VALIDATION
+  // ============================================================================
+  
+  // Validate required data before proceeding
   if (!logs || !Array.isArray(logs) || logs.length === 0) {
     throw new Error('No log data available for PDF generation');
   }
@@ -44,7 +89,11 @@ async function createPDFDocument(options: PDFReportOptions): Promise<jsPDF> {
     throw new Error('No filename provided for PDF generation');
   }
 
-  // Create new PDF document
+  // ============================================================================
+  // PDF DOCUMENT SETUP
+  // ============================================================================
+  
+  // Create new PDF document with A4 page size
   const pdf = new jsPDF('p', 'mm', 'a4');
   const pageWidth = pdf.internal.pageSize.getWidth();
   const pageHeight = pdf.internal.pageSize.getHeight();
@@ -54,7 +103,16 @@ async function createPDFDocument(options: PDFReportOptions): Promise<jsPDF> {
   let currentY = margin;
   let pageNumber = 1;
 
-  // Helper function to add page numbers and headers
+  // ============================================================================
+  // HELPER FUNCTIONS FOR DOCUMENT LAYOUT
+  // ============================================================================
+  
+  /**
+   * Add page headers and footers
+   * 
+   * Provides consistent page numbering and document identification
+   * across all pages of the report.
+   */
   const addPageHeader = (isFirstPage = false) => {
     if (!isFirstPage) {
       // Add header line
@@ -76,7 +134,12 @@ async function createPDFDocument(options: PDFReportOptions): Promise<jsPDF> {
     }
   };
 
-  // Helper function to add new page if needed
+  /**
+   * Check if new page is needed and add one if necessary
+   * 
+   * Prevents content from being cut off at page boundaries
+   * and maintains proper page flow.
+   */
   const checkPageBreak = (requiredHeight: number, addHeader = true) => {
     if (currentY + requiredHeight > pageHeight - margin - 15) {
       pdf.addPage();
@@ -90,7 +153,12 @@ async function createPDFDocument(options: PDFReportOptions): Promise<jsPDF> {
     return false;
   };
 
-  // Helper function to add text with word wrapping
+  /**
+   * Add text with automatic word wrapping
+   * 
+   * Handles long text content by wrapping it across multiple lines
+   * and managing page breaks as needed.
+   */
   const addWrappedText = (text: string, x: number, maxWidth: number, fontSize: number = 10, lineHeight: number = 1.6) => {
     if (!text || typeof text !== 'string') return;
     
@@ -105,7 +173,12 @@ async function createPDFDocument(options: PDFReportOptions): Promise<jsPDF> {
     });
   };
 
-  // Helper function to create section headers
+  /**
+   * Create professional section headers
+   * 
+   * Provides consistent styling for major report sections
+   * with background colors and accent lines.
+   */
   const addSectionHeader = (title: string, color: [number, number, number] = [50, 50, 50]) => {
     checkPageBreak(35);
     
@@ -131,7 +204,12 @@ async function createPDFDocument(options: PDFReportOptions): Promise<jsPDF> {
     pdf.setTextColor(0, 0, 0); // Reset to black
   };
 
-  // Helper function to format timestamp for PDF
+  /**
+   * Format timestamp for PDF display
+   * 
+   * Provides consistent timestamp formatting throughout the report
+   * with proper error handling for invalid dates.
+   */
   const formatTimestamp = (timestamp: Date | null) => {
     if (!timestamp || isNaN(timestamp.getTime())) {
       return 'N/A';
@@ -144,10 +222,13 @@ async function createPDFDocument(options: PDFReportOptions): Promise<jsPDF> {
   };
 
   try {
+    // ========================================================================
     // TITLE PAGE
+    // ========================================================================
+    
     addPageHeader(true);
     
-    // Company/Tool branding area
+    // Company/Tool branding area with gradient background
     pdf.setFillColor(59, 130, 246); // Blue background
     pdf.roundedRect(0, 0, pageWidth, 50, 0, 0, 'F');
     
@@ -166,7 +247,11 @@ async function createPDFDocument(options: PDFReportOptions): Promise<jsPDF> {
     pdf.setTextColor(0, 0, 0);
     currentY = 70;
 
-    // Report metadata
+    // ========================================================================
+    // REPORT METADATA SECTION
+    // ========================================================================
+    
+    // Report metadata card with key information
     pdf.setFillColor(249, 250, 251);
     pdf.setDrawColor(229, 231, 235);
     pdf.roundedRect(margin, currentY, contentWidth, 55, 5, 5, 'FD');
@@ -182,6 +267,7 @@ async function createPDFDocument(options: PDFReportOptions): Promise<jsPDF> {
     pdf.setFont('helvetica', 'normal');
     pdf.setTextColor(75, 85, 99);
     
+    // Key report details in structured format
     const reportDetails = [
       ['File Analyzed:', filename || 'Unknown'],
       ['Generated:', format(new Date(), 'MMMM dd, yyyy \'at\' HH:mm:ss')],
@@ -199,14 +285,19 @@ async function createPDFDocument(options: PDFReportOptions): Promise<jsPDF> {
 
     currentY += 25;
 
+    // ========================================================================
     // EXECUTIVE SUMMARY
+    // ========================================================================
+    
     addSectionHeader('Executive Summary', [16, 185, 129]);
 
+    // Calculate system health metrics
     const errorRate = summary.totalEntries > 0 ? ((summary.errorCount / summary.totalEntries) * 100).toFixed(1) : '0.0';
     
     let healthStatus = 'Excellent';
     let healthColor = [16, 185, 129]; // Green
     
+    // Determine health status based on error rate
     if (summary.errorCount > summary.totalEntries * 0.1) {
       healthStatus = 'Critical';
       healthColor = [239, 68, 68]; // Red
@@ -218,7 +309,7 @@ async function createPDFDocument(options: PDFReportOptions): Promise<jsPDF> {
       healthColor = [59, 130, 246]; // Blue
     }
 
-    // Health status badge - improved text alignment
+    // Health status badge with proper text alignment
     const badgeWidth = 80;
     const badgeHeight = 16;
     pdf.setFillColor(healthColor[0], healthColor[1], healthColor[2]);
@@ -236,6 +327,7 @@ async function createPDFDocument(options: PDFReportOptions): Promise<jsPDF> {
     
     currentY += 20;
 
+    // Executive summary narrative
     const summaryText = `This comprehensive analysis examined ${summary.totalEntries.toLocaleString()} log entries from the file "${filename}". ` +
       `The system demonstrates a ${errorRate}% error rate with ${summary.errorCount.toLocaleString()} errors and ${summary.warningCount.toLocaleString()} warnings detected throughout the analysis period. ` +
       `${(summary.criticalErrors?.length || 0) > 0 ? `${summary.criticalErrors.length} critical issues have been identified that require immediate attention.` : 'No critical issues were identified during this analysis period.'}`;
@@ -246,9 +338,13 @@ async function createPDFDocument(options: PDFReportOptions): Promise<jsPDF> {
     addWrappedText(summaryText, margin, contentWidth, 12, 1.7);
     currentY += 20;
 
+    // ========================================================================
     // KEY METRICS DASHBOARD
+    // ========================================================================
+    
     addSectionHeader('Key Performance Metrics', [59, 130, 246]);
 
+    // Metrics cards with color-coded styling
     const metrics = [
       { label: 'Total Log Entries', value: summary.totalEntries.toLocaleString(), color: [107, 114, 128], bgColor: [249, 250, 251] },
       { label: 'Error Events', value: summary.errorCount.toLocaleString(), color: [239, 68, 68], bgColor: [254, 242, 242] },
@@ -263,12 +359,13 @@ async function createPDFDocument(options: PDFReportOptions): Promise<jsPDF> {
     let cardY = currentY;
 
     metrics.forEach((metric, index) => {
+      // Layout cards in rows of 3
       if (index > 0 && index % 3 === 0) {
         cardY += cardHeight + 15;
         cardX = margin;
       }
 
-      // Card background
+      // Card background with border
       pdf.setFillColor(metric.bgColor[0], metric.bgColor[1], metric.bgColor[2]);
       pdf.setDrawColor(metric.color[0], metric.color[1], metric.color[2]);
       pdf.setLineWidth(0.5);
@@ -309,11 +406,14 @@ async function createPDFDocument(options: PDFReportOptions): Promise<jsPDF> {
 
     currentY = cardY + cardHeight + 25;
 
+    // ========================================================================
     // LOG DISTRIBUTION ANALYSIS
+    // ========================================================================
+    
     checkPageBreak(80);
     addSectionHeader('Log Distribution Analysis', [147, 51, 234]);
 
-    // Log levels distribution
+    // Calculate log levels distribution
     const levelCounts = logs.reduce((acc, log) => {
       if (log && log.level) {
         acc[log.level] = (acc[log.level] || 0) + 1;
@@ -325,6 +425,7 @@ async function createPDFDocument(options: PDFReportOptions): Promise<jsPDF> {
     const chartLabels = orderedLevels.filter(level => levelCounts[level] > 0);
     const chartData = chartLabels.map(level => levelCounts[level]);
 
+    // Create horizontal bar chart for log level distribution
     if (chartData.length > 0) {
       pdf.setFontSize(14);
       pdf.setFont('helvetica', 'bold');
@@ -340,7 +441,7 @@ async function createPDFDocument(options: PDFReportOptions): Promise<jsPDF> {
         const percentage = summary.totalEntries > 0 ? ((count / summary.totalEntries) * 100).toFixed(1) : '0.0';
         const barWidth = Math.max((count / maxCount) * barMaxWidth, 5);
 
-        // Level colors
+        // Level colors matching the application theme
         let color: [number, number, number];
         let bgColor: [number, number, number];
         switch (level) {
@@ -397,7 +498,10 @@ async function createPDFDocument(options: PDFReportOptions): Promise<jsPDF> {
       currentY += 20;
     }
 
+    // ========================================================================
     // CRITICAL ERRORS SECTION
+    // ========================================================================
+    
     if (summary.criticalErrors && summary.criticalErrors.length > 0) {
       checkPageBreak(50);
       addSectionHeader('Critical Issues Requiring Attention', [239, 68, 68]);
@@ -411,7 +515,7 @@ async function createPDFDocument(options: PDFReportOptions): Promise<jsPDF> {
       summary.criticalErrors.slice(0, 10).forEach((error, index) => {
         checkPageBreak(35);
         
-        // Error card
+        // Error card with red styling
         pdf.setFillColor(254, 242, 242);
         pdf.setDrawColor(252, 165, 165);
         pdf.setLineWidth(0.5);
@@ -452,7 +556,10 @@ async function createPDFDocument(options: PDFReportOptions): Promise<jsPDF> {
       currentY += 15;
     }
 
+    // ========================================================================
     // TOP ERRORS SECTION
+    // ========================================================================
+    
     if (summary.topErrors && summary.topErrors.length > 0) {
       checkPageBreak(50);
       addSectionHeader('Most Frequent Error Patterns', [245, 158, 11]);
@@ -497,12 +604,15 @@ async function createPDFDocument(options: PDFReportOptions): Promise<jsPDF> {
       currentY += 15;
     }
 
+    // ========================================================================
     // ADDITIONAL DETAILS SECTION
+    // ========================================================================
+    
     if (additionalDetails && additionalDetails.trim()) {
       checkPageBreak(40);
       addSectionHeader('Additional Analysis & Insights', [59, 130, 246]);
 
-      // Professional attribution
+      // Professional attribution for AI-generated content
       pdf.setFillColor(239, 246, 255);
       pdf.setDrawColor(147, 197, 253);
       pdf.roundedRect(margin, currentY, contentWidth, 18, 3, 3, 'FD');
@@ -523,7 +633,10 @@ async function createPDFDocument(options: PDFReportOptions): Promise<jsPDF> {
       currentY += 20;
     }
 
+    // ========================================================================
     // RECOMMENDATIONS SECTION
+    // ========================================================================
+    
     checkPageBreak(50);
     addSectionHeader('Actionable Recommendations', [16, 185, 129]);
 
@@ -562,7 +675,10 @@ async function createPDFDocument(options: PDFReportOptions): Promise<jsPDF> {
       currentY += 19; // Adjust spacing
     });
 
-    // FOOTER
+    // ========================================================================
+    // DOCUMENT FOOTER
+    // ========================================================================
+    
     currentY += 15;
     pdf.setFillColor(248, 250, 252);
     pdf.rect(0, pageHeight - 25, pageWidth, 25, 'F');
@@ -583,6 +699,15 @@ async function createPDFDocument(options: PDFReportOptions): Promise<jsPDF> {
   }
 }
 
+/**
+ * Generate actionable recommendations based on log analysis
+ * 
+ * Creates intelligent recommendations based on error rates, patterns,
+ * and system health indicators found in the log analysis.
+ * 
+ * @param summary - Log analysis summary data
+ * @returns Array of actionable recommendation strings
+ */
 function generateRecommendations(summary: LogSummary): string[] {
   const recommendations: string[] = [];
   
@@ -590,6 +715,7 @@ function generateRecommendations(summary: LogSummary): string[] {
     const errorRate = summary.totalEntries > 0 ? summary.errorCount / summary.totalEntries : 0;
     const warningRate = summary.totalEntries > 0 ? summary.warningCount / summary.totalEntries : 0;
 
+    // Error rate based recommendations
     if (errorRate > 0.1) {
       recommendations.push('CRITICAL: High error rate detected (>10%). Implement immediate error monitoring and alerting systems to prevent system instability.');
     } else if (errorRate > 0.05) {
@@ -600,27 +726,32 @@ function generateRecommendations(summary: LogSummary): string[] {
       recommendations.push('EXCELLENT: Zero errors detected indicating optimal system stability. Continue current operational practices.');
     }
 
+    // Warning rate based recommendations
     if (warningRate > 0.2) {
       recommendations.push('WARNING ANALYSIS: High warning rate (>20%) indicates potential system stress. Review warning patterns to prevent escalation to errors.');
     } else if (warningRate > 0.1) {
       recommendations.push('WARNING MANAGEMENT: Moderate warning levels detected. Implement automated warning analysis and establish response procedures.');
     }
 
+    // Critical errors recommendations
     if (summary.criticalErrors && summary.criticalErrors.length > 0) {
       recommendations.push(`IMMEDIATE ACTION: ${summary.criticalErrors.length} critical errors require urgent investigation. Create incident response procedures and assign dedicated resources.`);
     }
 
+    // Error patterns recommendations
     if (summary.topErrors && summary.topErrors.length > 0) {
       recommendations.push('ERROR PATTERN ANALYSIS: Recurring error patterns identified. Focus development efforts on resolving the most frequent error types for maximum impact.');
     }
 
+    // Performance optimization recommendations
     if (summary.debugCount > summary.infoCount * 3) {
       recommendations.push('PERFORMANCE OPTIMIZATION: High debug message volume detected. Review debug logging levels for production environments to improve performance.');
     }
 
+    // General monitoring recommendation
     recommendations.push('CONTINUOUS MONITORING: Implement real-time log monitoring with automated alerting for error thresholds and establish SLA monitoring.');
 
-    return recommendations.slice(0, 6);
+    return recommendations.slice(0, 6); // Limit to 6 recommendations
   } catch (error) {
     console.error('Error generating recommendations:', error);
     return ['Unable to generate recommendations due to data processing error.'];

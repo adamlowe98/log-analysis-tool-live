@@ -1,22 +1,111 @@
 {
+  /**
+   * TypeScript Configuration for Node.js Tooling
+   * 
+   * This configuration file is specifically for Node.js-based tooling files
+   * like Vite configuration, build scripts, and other development tools.
+   * It uses different settings optimized for Node.js environments.
+   */
+  
   "compilerOptions": {
+    // ========================================================================
+    // TARGET AND MODULE CONFIGURATION
+    // ========================================================================
+    
+    /**
+     * Target ES2022 for Node.js compatibility
+     * Provides access to modern JavaScript features available in recent Node.js versions
+     */
     "target": "ES2022",
+    
+    /**
+     * Include ES2023 library features
+     * Enables the latest JavaScript standard library features
+     */
     "lib": ["ES2023"],
+    
+    /**
+     * Use ESNext module system
+     * Enables modern import/export syntax for tooling files
+     */
     "module": "ESNext",
+    
+    /**
+     * Skip library type checking for faster compilation
+     * Focuses on tooling code rather than dependency types
+     */
     "skipLibCheck": true,
 
-    /* Bundler mode */
+    // ========================================================================
+    // BUNDLER MODE CONFIGURATION
+    // ========================================================================
+    
+    /**
+     * Use bundler module resolution
+     * Compatible with modern Node.js module resolution
+     */
     "moduleResolution": "bundler",
+    
+    /**
+     * Allow importing TypeScript files with extensions
+     * Enables explicit file extensions in tooling imports
+     */
     "allowImportingTsExtensions": true,
+    
+    /**
+     * Treat each file as a separate module
+     * Ensures proper module isolation in tooling files
+     */
     "isolatedModules": true,
+    
+    /**
+     * Force module detection for all files
+     * Ensures consistent module behavior in tooling
+     */
     "moduleDetection": "force",
+    
+    /**
+     * Don't emit JavaScript files during compilation
+     * Node.js tooling is typically run directly by the runtime
+     */
     "noEmit": true,
 
-    /* Linting */
+    // ========================================================================
+    // STRICT TYPE CHECKING
+    // ========================================================================
+    
+    /**
+     * Enable all strict type checking options
+     * Maintains high code quality in tooling files
+     */
     "strict": true,
+    
+    /**
+     * Report errors for unused local variables
+     * Keeps tooling code clean and maintainable
+     */
     "noUnusedLocals": true,
+    
+    /**
+     * Report errors for unused function parameters
+     * Encourages explicit parameter usage in tooling
+     */
     "noUnusedParameters": true,
+    
+    /**
+     * Report errors for switch statements without default cases
+     * Ensures comprehensive case handling in tooling logic
+     */
     "noFallthroughCasesInSwitch": true
   },
+  
+  // ==========================================================================
+  // FILE INCLUSION
+  // ==========================================================================
+  
+  /**
+   * Include Vite configuration file
+   * Specifically targets the Vite configuration for type checking
+   */
   "include": ["vite.config.ts"]
 }

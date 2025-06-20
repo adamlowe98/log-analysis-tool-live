@@ -1,41 +1,163 @@
 {
+  /**
+   * Package Configuration for Log Analysis Tool
+   * 
+   * This package.json file defines the project metadata, dependencies,
+   * and build scripts for the React-based log analysis application.
+   * 
+   * The project uses modern React with TypeScript and Vite for optimal
+   * development experience and production performance.
+   */
+  
+  // ==========================================================================
+  // PROJECT METADATA
+  // ==========================================================================
+  
+  /**
+   * Project name - used for package identification
+   */
   "name": "vite-react-typescript-starter",
+  
+  /**
+   * Private package - not intended for npm publication
+   * This is an application, not a reusable library
+   */
   "private": true,
+  
+  /**
+   * Current version following semantic versioning
+   */
   "version": "0.0.0",
+  
+  /**
+   * Module type - enables ES modules throughout the project
+   * Allows use of import/export syntax in all JavaScript files
+   */
   "type": "module",
+  
+  // ==========================================================================
+  // BUILD AND DEVELOPMENT SCRIPTS
+  // ==========================================================================
+  
   "scripts": {
+    /**
+     * Development server script
+     * Starts Vite development server with hot module replacement
+     * Provides fast refresh and instant updates during development
+     */
     "dev": "vite",
+    
+    /**
+     * Production build script
+     * Creates optimized production bundle with minification and tree-shaking
+     * Output goes to dist/ directory
+     */
     "build": "vite build",
+    
+    /**
+     * Code linting script
+     * Runs ESLint to check for code quality and style issues
+     * Helps maintain consistent code standards
+     */
     "lint": "eslint .",
+    
+    /**
+     * Preview production build script
+     * Serves the production build locally for testing
+     * Useful for verifying production behavior before deployment
+     */
     "preview": "vite preview"
   },
+  
+  // ==========================================================================
+  // RUNTIME DEPENDENCIES
+  // ==========================================================================
+  
   "dependencies": {
+    /**
+     * AI Integration
+     * Google Generative AI SDK for optional AI assistant functionality
+     */
     "@google/generative-ai": "^0.21.0",
+    
+    /**
+     * Database Integration
+     * Supabase client for optional session tracking and analytics
+     */
     "@supabase/supabase-js": "^2.39.0",
+    
+    /**
+     * Data Visualization
+     * Chart.js ecosystem for creating interactive charts and graphs
+     */
     "chart.js": "^4.4.0",
-    "chartjs-adapter-date-fns": "^3.0.0",
+    "chartjs-adapter-date-fns": "^3.0.0", // Date handling for time-series charts
+    "react-chartjs-2": "^5.2.0", // React wrapper for Chart.js
+    
+    /**
+     * Date and Time Utilities
+     * Comprehensive date manipulation and formatting library
+     */
     "date-fns": "^2.30.0",
-    "html2canvas": "^1.4.1",
-    "jspdf": "^2.5.1",
+    
+    /**
+     * PDF Generation
+     * Client-side PDF creation for analysis reports
+     */
+    "html2canvas": "^1.4.1", // HTML to canvas conversion
+    "jspdf": "^2.5.1", // PDF document generation
+    
+    /**
+     * UI Icons
+     * Comprehensive icon library with React components
+     */
     "lucide-react": "^0.344.0",
+    
+    /**
+     * React Framework
+     * Core React library and DOM rendering
+     */
     "react": "^18.3.1",
-    "react-chartjs-2": "^5.2.0",
     "react-dom": "^18.3.1"
   },
+  
+  // ==========================================================================
+  // DEVELOPMENT DEPENDENCIES
+  // ==========================================================================
+  
   "devDependencies": {
+    /**
+     * Code Quality Tools
+     * ESLint configuration and plugins for code quality enforcement
+     */
     "@eslint/js": "^9.9.1",
+    "eslint": "^9.9.1",
+    "eslint-plugin-react-hooks": "^5.1.0-rc.0", // React Hooks linting rules
+    "eslint-plugin-react-refresh": "^0.4.11", // Fast Refresh compatibility
+    "globals": "^15.9.0", // Global variable definitions for ESLint
+    
+    /**
+     * TypeScript Support
+     * Type definitions for React and development tools
+     */
     "@types/react": "^18.3.5",
     "@types/react-dom": "^18.3.0",
-    "@vitejs/plugin-react": "^4.3.1",
-    "autoprefixer": "^10.4.18",
-    "eslint": "^9.9.1",
-    "eslint-plugin-react-hooks": "^5.1.0-rc.0",
-    "eslint-plugin-react-refresh": "^0.4.11",
-    "globals": "^15.9.0",
-    "postcss": "^8.4.35",
-    "tailwindcss": "^3.4.1",
     "typescript": "^5.5.3",
-    "typescript-eslint": "^8.3.0",
-    "vite": "^5.4.2"
+    "typescript-eslint": "^8.3.0", // TypeScript ESLint integration
+    
+    /**
+     * CSS Processing
+     * Tailwind CSS and PostCSS for styling
+     */
+    "autoprefixer": "^10.4.18", // Automatic vendor prefixing
+    "postcss": "^8.4.35", // CSS post-processing
+    "tailwindcss": "^3.4.1", // Utility-first CSS framework
+    
+    /**
+     * Build Tools
+     * Vite build system and React plugin
+     */
+    "@vitejs/plugin-react": "^4.3.1", // React support for Vite
+    "vite": "^5.4.2" // Fast build tool and development server
   }
 }

@@ -1,24 +1,125 @@
 {
+  /**
+   * TypeScript Configuration for Application Code
+   * 
+   * This configuration file defines TypeScript compiler options specifically
+   * for the main application source code. It's optimized for modern React
+   * development with strict type checking and modern JavaScript features.
+   */
+  
   "compilerOptions": {
+    // ========================================================================
+    // TARGET AND MODULE CONFIGURATION
+    // ========================================================================
+    
+    /**
+     * Target ES2020 for modern JavaScript features
+     * Provides good browser support while enabling modern syntax
+     */
     "target": "ES2020",
+    
+    /**
+     * Use class fields as defined in the ES specification
+     * Ensures consistent behavior with modern JavaScript standards
+     */
     "useDefineForClassFields": true,
+    
+    /**
+     * Include ES2020 and DOM libraries
+     * - ES2020: Modern JavaScript features
+     * - DOM: Browser APIs and DOM types
+     * - DOM.Iterable: Iteration support for DOM collections
+     */
     "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    
+    /**
+     * Use ESNext module system for latest module features
+     * Enables modern import/export syntax and dynamic imports
+     */
     "module": "ESNext",
+    
+    /**
+     * Skip library type checking for faster compilation
+     * Focuses type checking on application code rather than dependencies
+     */
     "skipLibCheck": true,
 
-    /* Bundler mode */
+    // ========================================================================
+    // BUNDLER MODE CONFIGURATION
+    // ========================================================================
+    
+    /**
+     * Use bundler module resolution for Vite compatibility
+     * Optimized for modern bundlers like Vite, Webpack, etc.
+     */
     "moduleResolution": "bundler",
+    
+    /**
+     * Allow importing TypeScript files with extensions
+     * Enables explicit file extensions in imports for clarity
+     */
     "allowImportingTsExtensions": true,
+    
+    /**
+     * Treat each file as a separate module
+     * Ensures proper module isolation and prevents global scope pollution
+     */
     "isolatedModules": true,
+    
+    /**
+     * Force module detection for all files
+     * Ensures consistent module behavior across the project
+     */
     "moduleDetection": "force",
+    
+    /**
+     * Don't emit JavaScript files during compilation
+     * Vite handles the actual compilation and bundling
+     */
     "noEmit": true,
+    
+    /**
+     * Use React JSX transformation
+     * Enables modern React JSX without explicit React imports
+     */
     "jsx": "react-jsx",
 
-    /* Linting */
+    // ========================================================================
+    // STRICT TYPE CHECKING
+    // ========================================================================
+    
+    /**
+     * Enable all strict type checking options
+     * Provides the highest level of type safety
+     */
     "strict": true,
+    
+    /**
+     * Report errors for unused local variables
+     * Helps maintain clean code by catching unused declarations
+     */
     "noUnusedLocals": true,
+    
+    /**
+     * Report errors for unused function parameters
+     * Encourages explicit parameter usage or underscore prefixing
+     */
     "noUnusedParameters": true,
+    
+    /**
+     * Report errors for switch statements without default cases
+     * Ensures all switch statements handle all possible cases
+     */
     "noFallthroughCasesInSwitch": true
   },
+  
+  // ==========================================================================
+  // FILE INCLUSION
+  // ==========================================================================
+  
+  /**
+   * Include all source files for compilation
+   * Covers all TypeScript and JavaScript files in the src directory
+   */
   "include": ["src"]
 }

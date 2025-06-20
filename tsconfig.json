@@ -1,5 +1,33 @@
 {
+  /**
+   * TypeScript Configuration Root
+   * 
+   * This is the root TypeScript configuration file that coordinates
+   * multiple configuration files for different parts of the project.
+   * 
+   * The project uses a composite configuration approach:
+   * - tsconfig.app.json: Configuration for application source code
+   * - tsconfig.node.json: Configuration for Node.js tooling (Vite config, etc.)
+   * 
+   * This approach allows for different TypeScript settings for different
+   * parts of the project while maintaining type safety throughout.
+   */
+  
+  /**
+   * No files are directly included in this root configuration
+   * All file inclusion is handled by the referenced configurations
+   */
   "files": [],
+  
+  /**
+   * Project references to sub-configurations
+   * 
+   * Each reference points to a specific TypeScript configuration file
+   * that handles a particular aspect of the project:
+   * 
+   * - ./tsconfig.app.json: Main application code configuration
+   * - ./tsconfig.node.json: Node.js tooling configuration
+   */
   "references": [
     { "path": "./tsconfig.app.json" },
     { "path": "./tsconfig.node.json" }
