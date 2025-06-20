@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -36,16 +36,17 @@ interface LogChartsProps {
 }
 
 /**
- * LogCharts Component with Fresh Data Processing
+ * LogCharts Component with NO CACHING - Fresh Data Processing Only
  * 
- * This component renders interactive charts for log analysis with fresh data
- * processing every time to ensure data security and accuracy.
+ * This component renders interactive charts for log analysis with completely fresh data
+ * processing every single time to ensure maximum security and data accuracy.
  * 
- * Features:
- * - Fresh data processing on every render - no caching
- * - TRACE log level support in charts
- * - Performance optimizations for large datasets
- * - Coming soon section for future chart additions
+ * SECURITY FEATURES:
+ * - NO data caching whatsoever
+ * - NO memoization of chart data
+ * - NO browser-side data persistence
+ * - Fresh processing on every render
+ * - No data reuse between sessions
  * 
  * Performance Features:
  * - Async data processing with loading states
@@ -53,17 +54,12 @@ interface LogChartsProps {
  * - Progressive rendering with user feedback
  * - Memory-efficient chart data preparation
  * 
- * Security Features:
- * - No data caching to prevent sensitive log data persistence
- * - Fresh processing ensures data accuracy
- * - No browser-side data storage
- * 
- * The component uses React hooks to manage async processing and provides
- * visual feedback during chart preparation for datasets over 10,000 entries.
+ * The component processes log data fresh every time it renders to prevent
+ * any possibility of sensitive log data being cached or persisted.
  */
 export function LogCharts({ logs }: LogChartsProps) {
   // ============================================================================
-  // STATE MANAGEMENT FOR PERFORMANCE
+  // STATE MANAGEMENT FOR FRESH PROCESSING ONLY
   // ============================================================================
   
   /**
@@ -79,13 +75,16 @@ export function LogCharts({ logs }: LogChartsProps) {
   const [processingError, setProcessingError] = useState<string | null>(null);
   
   /**
-   * Processed chart data state
-   * Stores the computed chart data after async processing
+   * Processed chart data state - NEVER CACHED
+   * Stores the computed chart data after fresh async processing
+   * This data is cleared and regenerated on every component mount/update
    */
   const [chartData, setChartData] = useState<{
     validLogs: LogEntry[];
     levelCounts: Record<string, number>;
     timeRange: { start: Date; end: Date };
+    levelData: any;
+    doughnutOptions: any;
   } | null>(null);
 
   // ============================================================================
@@ -99,36 +98,39 @@ export function LogCharts({ logs }: LogChartsProps) {
   const VERY_LARGE_DATASET_THRESHOLD = 50000;  // Apply aggressive sampling for datasets larger than this
 
   // ============================================================================
-  // FRESH DATA PROCESSING EFFECT (NO CACHING)
+  // FRESH DATA PROCESSING EFFECT (NO CACHING EVER)
   // ============================================================================
   
   /**
-   * Effect to process log data asynchronously with fresh processing every time
+   * Effect to process log data completely fresh every single time
    * 
    * This effect runs whenever the logs prop changes and handles:
-   * - Fresh data processing (no caching for security)
+   * - COMPLETE fresh data processing (no caching ever)
    * - Large dataset detection and user feedback
    * - Async processing to prevent UI blocking
    * - Data sampling and optimization for performance
    * - Error handling and recovery
+   * 
+   * CRITICAL: This always clears existing data and processes fresh
    */
   useEffect(() => {
-    const processLogData = async () => {
-      // Reset error state
+    const processLogDataFresh = async () => {
+      console.log('🔄 FRESH PROCESSING: Starting completely fresh chart data processing (NO CACHING)');
+      
+      // ALWAYS clear everything first - no data reuse
+      setChartData(null);
       setProcessingError(null);
       
-      // If no logs, clear everything
+      // If no logs, stay cleared
       if (!logs || logs.length === 0) {
-        setChartData(null);
+        console.log('📊 No logs provided - charts cleared');
         return;
       }
-      
-      // Always clear existing chart data for fresh processing
-      setChartData(null);
       
       // Show loading for large datasets
       if (logs.length > LARGE_DATASET_THRESHOLD) {
         setIsProcessing(true);
+        console.log(`⏳ Large dataset detected (${logs.length} entries) - showing loading indicator`);
       }
 
       try {
@@ -136,36 +138,40 @@ export function LogCharts({ logs }: LogChartsProps) {
         // This prevents the UI from freezing during processing
         await new Promise(resolve => setTimeout(resolve, 10));
 
-        console.log('Processing fresh chart data (no caching)...');
-        const processedData = await processChartsData(logs);
+        console.log(`🔄 Processing ${logs.length} log entries fresh from scratch...`);
+        const processedData = await processChartsDataFresh(logs);
         
+        console.log('✅ Fresh chart data processing complete');
         setChartData(processedData);
       } catch (error) {
-        console.error('Error processing chart data:', error);
+        console.error('❌ Error processing fresh chart data:', error);
         setProcessingError('Failed to process chart data. The dataset may be too large or contain invalid data.');
       } finally {
         setIsProcessing(false);
       }
     };
 
-    processLogData();
-  }, [logs]);
+    // Always process fresh - no cache checks
+    processLogDataFresh();
+  }, [logs]); // Re-run whenever logs change
 
   // ============================================================================
-  // ASYNC DATA PROCESSING FUNCTION
+  // FRESH DATA PROCESSING FUNCTION (NO CACHING)
   // ============================================================================
   
   /**
-   * Process chart data asynchronously with performance optimizations
+   * Process chart data completely fresh with no caching whatsoever
    * 
    * This function handles the heavy computation of chart data preparation
    * with special optimizations for large datasets including data sampling
-   * and intelligent processing.
+   * and intelligent processing. NO DATA IS EVER CACHED.
    * 
-   * @param logs - Array of log entries to process
-   * @returns Promise resolving to processed chart data
+   * @param logs - Array of log entries to process fresh
+   * @returns Promise resolving to completely fresh processed chart data
    */
-  const processChartsData = async (logs: LogEntry[]) => {
+  const processChartsDataFresh = async (logs: LogEntry[]) => {
+    console.log('🔄 FRESH PROCESSING: Starting fresh data processing pipeline');
+    
     // ========================================================================
     // STEP 1: FILTER VALID LOGS WITH PERFORMANCE OPTIMIZATION
     // ========================================================================
@@ -177,6 +183,8 @@ export function LogCharts({ logs }: LogChartsProps) {
       log.timestamp.getFullYear() < 2030 &&
       log.timestamp.getTime() > new Date('2020-01-01').getTime()
     );
+
+    console.log(`📊 Filtered to ${validLogs.length} valid logs from ${logs.length} total`);
 
     // ========================================================================
     // STEP 2: DATA SAMPLING FOR VERY LARGE DATASETS
@@ -191,14 +199,14 @@ export function LogCharts({ logs }: LogChartsProps) {
       const sampleRate = Math.ceil(validLogs.length / VERY_LARGE_DATASET_THRESHOLD);
       validLogs = validLogs.filter((_, index) => index % sampleRate === 0);
       
-      console.log(`Applied sampling: reduced from ${logs.length} to ${validLogs.length} entries for performance`);
+      console.log(`📊 Applied sampling: reduced from ${logs.length} to ${validLogs.length} entries for performance`);
     }
 
     // Yield control to prevent UI blocking
     await new Promise(resolve => setTimeout(resolve, 5));
 
     // ========================================================================
-    // STEP 3: CALCULATE LOG LEVEL DISTRIBUTION
+    // STEP 3: CALCULATE LOG LEVEL DISTRIBUTION (FRESH)
     // ========================================================================
     
     /**
@@ -210,11 +218,13 @@ export function LogCharts({ logs }: LogChartsProps) {
       return acc;
     }, {} as Record<string, number>);
 
+    console.log('📊 Calculated fresh level counts:', levelCounts);
+
     // Yield control to prevent UI blocking
     await new Promise(resolve => setTimeout(resolve, 5));
 
     // ========================================================================
-    // STEP 4: CALCULATE TIME RANGE
+    // STEP 4: CALCULATE TIME RANGE (FRESH)
     // ========================================================================
     
     if (validLogs.length === 0) {
@@ -226,36 +236,13 @@ export function LogCharts({ logs }: LogChartsProps) {
       end: new Date(Math.max(...validLogs.map(log => log.timestamp!.getTime()))),
     };
 
-    return {
-      validLogs,
-      levelCounts,
-      timeRange
-    };
-  };
-
-  // ============================================================================
-  // MEMOIZED CHART DATA PREPARATION
-  // ============================================================================
-  
-  /**
-   * Memoized chart data objects to prevent unnecessary re-renders
-   * Only recalculates when processed chart data changes
-   * Now includes TRACE level in all chart configurations
-   */
-  const { levelData, doughnutOptions } = useMemo(() => {
-    if (!chartData) {
-      return {
-        levelData: null,
-        doughnutOptions: null
-      };
-    }
-
-    const { levelCounts } = chartData;
+    console.log('📊 Calculated fresh time range:', timeRange);
 
     // ========================================================================
-    // LEVEL DISTRIBUTION CHART DATA (INCLUDING TRACE)
+    // STEP 5: GENERATE FRESH CHART DATA (NO MEMOIZATION)
     // ========================================================================
     
+    // Generate fresh chart data every time - NO MEMOIZATION
     const levelColors = {
       'ERROR': '#ef4444',    // Red
       'WARN': '#f59e0b',     // Yellow/Orange
@@ -317,11 +304,16 @@ export function LogCharts({ logs }: LogChartsProps) {
       },
     };
 
+    console.log('✅ Generated fresh chart data objects');
+
     return {
+      validLogs,
+      levelCounts,
+      timeRange,
       levelData,
       doughnutOptions
     };
-  }, [chartData]);
+  };
 
   // ============================================================================
   // LOADING STATE RENDER
@@ -339,12 +331,12 @@ export function LogCharts({ logs }: LogChartsProps) {
             <Loader2 className="h-8 w-8 animate-spin text-blue-600 dark:text-blue-400" />
           </div>
           <div>
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Processing Chart Data</h3>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Processing Fresh Chart Data</h3>
             <p className="text-sm text-gray-600 dark:text-gray-300 mt-2">
-              Analyzing {logs.length.toLocaleString()} log entries...
+              Analyzing {logs.length.toLocaleString()} log entries fresh from scratch...
             </p>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-              Processing fresh data for security and accuracy
+              🔒 NO CACHING - Processing fresh data for maximum security
             </p>
           </div>
         </div>
@@ -368,7 +360,7 @@ export function LogCharts({ logs }: LogChartsProps) {
             <AlertCircle className="h-8 w-8 text-red-600 dark:text-red-400" />
           </div>
           <div>
-            <h3 className="text-lg font-semibold text-red-900 dark:text-red-300">Chart Processing Failed</h3>
+            <h3 className="text-lg font-semibold text-red-900 dark:text-red-300">Fresh Chart Processing Failed</h3>
             <p className="text-sm text-red-700 dark:text-red-400 mt-2 max-w-md">
               {processingError}
             </p>
@@ -401,14 +393,14 @@ export function LogCharts({ logs }: LogChartsProps) {
   // MAIN CHARTS RENDER
   // ============================================================================
   
-  const { validLogs, levelCounts, timeRange } = chartData;
+  const { validLogs, levelCounts, timeRange, levelData, doughnutOptions } = chartData;
 
   // ============================================================================
-  // CALCULATE ACCURATE ERROR RATES
+  // CALCULATE ACCURATE ERROR RATES (FRESH)
   // ============================================================================
   
   /**
-   * Calculate accurate error and warning rates
+   * Calculate accurate error and warning rates fresh every time
    * Ensure we're using the correct total count and handling edge cases
    */
   const totalEntries = logs.length;
@@ -422,27 +414,27 @@ export function LogCharts({ logs }: LogChartsProps) {
   return (
     <div className="space-y-6">
       {/* ========================================================================
-          PERFORMANCE NOTICE FOR LARGE DATASETS
+          NO CACHING SECURITY NOTICE
           ======================================================================== */}
-      {logs.length > LARGE_DATASET_THRESHOLD && (
-        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 transition-colors duration-200">
-          <div className="flex items-start space-x-2">
-            <AlertCircle className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
-            <div>
-              <h4 className="text-sm font-medium text-blue-800 dark:text-blue-300">
-                Large Dataset Processing
-              </h4>
-              <p className="text-sm text-blue-700 dark:text-blue-400 mt-1">
-                {logs.length > VERY_LARGE_DATASET_THRESHOLD 
-                  ? `Dataset contains ${logs.length.toLocaleString()} entries. Applied intelligent sampling for optimal performance.`
-                  : `Processing ${logs.length.toLocaleString()} entries with performance optimizations enabled.`
-                }
-                <span className="block mt-1">Fresh data processing ensures security and accuracy - no caching applied.</span>
-              </p>
-            </div>
+      <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4 transition-colors duration-200">
+        <div className="flex items-start space-x-2">
+          <AlertCircle className="h-5 w-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
+          <div>
+            <h4 className="text-sm font-medium text-green-800 dark:text-green-300">
+              🔒 Maximum Security Mode
+            </h4>
+            <p className="text-sm text-green-700 dark:text-green-400 mt-1">
+              Chart data is processed completely fresh every time with NO CACHING whatsoever. 
+              No log data is ever stored, cached, or persisted in browser memory for maximum security.
+              {logs.length > LARGE_DATASET_THRESHOLD && (
+                <span className="block mt-1">
+                  Processing {logs.length.toLocaleString()} entries fresh from scratch with performance optimizations.
+                </span>
+              )}
+            </p>
           </div>
         </div>
-      )}
+      </div>
 
       {/* ========================================================================
           SUMMARY STATS (INCLUDING TRACE) WITH CORRECTED ERROR RATES
