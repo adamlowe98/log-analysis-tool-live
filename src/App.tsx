@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { FileUpload } from './components/FileUpload';
 import { LogSummary } from './components/LogSummary';
-import { LogCharts } from './components/LogCharts';
+import { LogCharts, clearChartCache } from './components/LogCharts';
 import { LogTable } from './components/LogTable';
 import { ReportGenerator } from './components/ReportGenerator';
 import { GeminiChatbot } from './components/GeminiChatbot';
@@ -130,6 +130,9 @@ function App() {
    */
   const handleFileUpload = async (content: string, fileName: string) => {
     try {
+      // Clear any existing chart cache before processing new file
+      clearChartCache();
+      
       // Parse log file content into structured LogEntry objects
       // This handles various log formats and extracts timestamps, levels, messages
       const parsedLogs = parseLogFile(content);
@@ -175,9 +178,13 @@ function App() {
    * 
    * Clears all analysis data and returns to file upload screen
    * Includes visual feedback for better user experience
+   * Now properly clears chart cache to ensure fresh data processing
    */
   const handleReset = async () => {
     setIsResetting(true);
+    
+    // Clear chart cache to ensure fresh processing on next upload
+    clearChartCache();
     
     // Clear all analysis state including AI-generated content
     setLogs([]);

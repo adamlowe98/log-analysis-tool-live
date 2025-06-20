@@ -52,6 +52,15 @@ interface ChartCache {
 let chartCache: ChartCache | null = null;
 
 /**
+ * Clear the chart cache - called when app resets
+ * This ensures fresh data processing when user hits "Start Over"
+ */
+export function clearChartCache() {
+  console.log('Clearing chart cache');
+  chartCache = null;
+}
+
+/**
  * Generate a simple hash from logs array for cache validation
  * Uses log count and first/last entries to detect changes
  */
@@ -72,6 +81,7 @@ function generateLogsHash(logs: LogEntry[]): string {
  * 
  * Features:
  * - Chart data caching to prevent reprocessing when switching tabs
+ * - Cache clearing when app resets to ensure fresh data processing
  * - TRACE log level support in charts
  * - Performance optimizations for large datasets
  * - Coming soon section for future chart additions
@@ -82,6 +92,7 @@ function generateLogsHash(logs: LogEntry[]): string {
  * - Progressive rendering with user feedback
  * - Memory-efficient chart data preparation
  * - Chart data caching across tab switches
+ * - Proper cache invalidation on app reset
  * 
  * The component uses React hooks to manage async processing and provides
  * visual feedback during chart preparation for datasets over 10,000 entries.
@@ -124,6 +135,21 @@ export function LogCharts({ logs }: LogChartsProps) {
   const VERY_LARGE_DATASET_THRESHOLD = 50000;  // Apply aggressive sampling for datasets larger than this
 
   // ============================================================================
+  // CACHE CLEARING ON COMPONENT MOUNT
+  // ============================================================================
+  
+  /**
+   * Clear cache when component mounts with empty logs
+   * This handles the case when user hits "Start Over"
+   */
+  useEffect(() => {
+    if (!logs || logs.length === 0) {
+      clearChartCache();
+      setChartData(null);
+    }
+  }, [logs]);
+
+  // ============================================================================
   // ASYNC DATA PROCESSING EFFECT WITH CACHING
   // ============================================================================
   
@@ -142,6 +168,13 @@ export function LogCharts({ logs }: LogChartsProps) {
     const processLogData = async () => {
       // Reset error state
       setProcessingError(null);
+      
+      // If no logs, clear everything
+      if (!logs || logs.length === 0) {
+        setChartData(null);
+        clearChartCache();
+        return;
+      }
       
       // Generate hash for current logs to check cache validity
       const currentHash = generateLogsHash(logs);
@@ -184,12 +217,7 @@ export function LogCharts({ logs }: LogChartsProps) {
       }
     };
 
-    if (logs && logs.length > 0) {
-      processLogData();
-    } else {
-      setChartData(null);
-      chartCache = null; // Clear cache when no logs
-    }
+    processLogData();
   }, [logs]);
 
   // ============================================================================
