@@ -36,52 +36,13 @@ interface LogChartsProps {
 }
 
 /**
- * Chart cache to store processed chart data
- * Prevents reprocessing when switching between tabs
- */
-interface ChartCache {
-  logsHash: string;
-  data: {
-    validLogs: LogEntry[];
-    levelCounts: Record<string, number>;
-    timeRange: { start: Date; end: Date };
-  };
-}
-
-// Global chart cache - persists across component unmounts
-let chartCache: ChartCache | null = null;
-
-/**
- * Clear the chart cache - called when app resets
- * This ensures fresh data processing when user hits "Start Over"
- */
-export function clearChartCache() {
-  console.log('Clearing chart cache');
-  chartCache = null;
-}
-
-/**
- * Generate a simple hash from logs array for cache validation
- * Uses log count and first/last entries to detect changes
- */
-function generateLogsHash(logs: LogEntry[]): string {
-  if (!logs || logs.length === 0) return 'empty';
-  
-  const firstLog = logs[0];
-  const lastLog = logs[logs.length - 1];
-  
-  return `${logs.length}-${firstLog?.id || 'none'}-${lastLog?.id || 'none'}-${firstLog?.timestamp?.getTime() || 0}`;
-}
-
-/**
- * LogCharts Component with Performance Optimizations and Caching
+ * LogCharts Component with Fresh Data Processing
  * 
- * This component renders interactive charts for log analysis with special handling
- * for large datasets to prevent UI freezing and provide smooth user experience.
+ * This component renders interactive charts for log analysis with fresh data
+ * processing every time to ensure data security and accuracy.
  * 
  * Features:
- * - Chart data caching to prevent reprocessing when switching tabs
- * - Cache clearing when app resets to ensure fresh data processing
+ * - Fresh data processing on every render - no caching
  * - TRACE log level support in charts
  * - Performance optimizations for large datasets
  * - Coming soon section for future chart additions
@@ -91,15 +52,18 @@ function generateLogsHash(logs: LogEntry[]): string {
  * - Data sampling for very large datasets
  * - Progressive rendering with user feedback
  * - Memory-efficient chart data preparation
- * - Chart data caching across tab switches
- * - Proper cache invalidation on app reset
+ * 
+ * Security Features:
+ * - No data caching to prevent sensitive log data persistence
+ * - Fresh processing ensures data accuracy
+ * - No browser-side data storage
  * 
  * The component uses React hooks to manage async processing and provides
  * visual feedback during chart preparation for datasets over 10,000 entries.
  */
 export function LogCharts({ logs }: LogChartsProps) {
   // ============================================================================
-  // STATE MANAGEMENT FOR PERFORMANCE AND CACHING
+  // STATE MANAGEMENT FOR PERFORMANCE
   // ============================================================================
   
   /**
@@ -135,34 +99,18 @@ export function LogCharts({ logs }: LogChartsProps) {
   const VERY_LARGE_DATASET_THRESHOLD = 50000;  // Apply aggressive sampling for datasets larger than this
 
   // ============================================================================
-  // CACHE CLEARING ON COMPONENT MOUNT
+  // FRESH DATA PROCESSING EFFECT (NO CACHING)
   // ============================================================================
   
   /**
-   * Clear cache when component mounts with empty logs
-   * This handles the case when user hits "Start Over"
-   */
-  useEffect(() => {
-    if (!logs || logs.length === 0) {
-      clearChartCache();
-      setChartData(null);
-    }
-  }, [logs]);
-
-  // ============================================================================
-  // ASYNC DATA PROCESSING EFFECT WITH CACHING
-  // ============================================================================
-  
-  /**
-   * Effect to process log data asynchronously with intelligent caching
+   * Effect to process log data asynchronously with fresh processing every time
    * 
    * This effect runs whenever the logs prop changes and handles:
-   * - Cache validation and retrieval
+   * - Fresh data processing (no caching for security)
    * - Large dataset detection and user feedback
    * - Async processing to prevent UI blocking
    * - Data sampling and optimization for performance
    * - Error handling and recovery
-   * - Cache storage for future use
    */
   useEffect(() => {
     const processLogData = async () => {
@@ -172,21 +120,10 @@ export function LogCharts({ logs }: LogChartsProps) {
       // If no logs, clear everything
       if (!logs || logs.length === 0) {
         setChartData(null);
-        clearChartCache();
         return;
       }
       
-      // Generate hash for current logs to check cache validity
-      const currentHash = generateLogsHash(logs);
-      
-      // Check if we have valid cached data
-      if (chartCache && chartCache.logsHash === currentHash) {
-        console.log('Using cached chart data');
-        setChartData(chartCache.data);
-        return;
-      }
-      
-      // Clear existing chart data
+      // Always clear existing chart data for fresh processing
       setChartData(null);
       
       // Show loading for large datasets
@@ -199,14 +136,8 @@ export function LogCharts({ logs }: LogChartsProps) {
         // This prevents the UI from freezing during processing
         await new Promise(resolve => setTimeout(resolve, 10));
 
-        console.log('Processing new chart data...');
+        console.log('Processing fresh chart data (no caching)...');
         const processedData = await processChartsData(logs);
-        
-        // Store in cache for future use
-        chartCache = {
-          logsHash: currentHash,
-          data: processedData
-        };
         
         setChartData(processedData);
       } catch (error) {
@@ -413,7 +344,7 @@ export function LogCharts({ logs }: LogChartsProps) {
               Analyzing {logs.length.toLocaleString()} log entries...
             </p>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-              Large datasets may take a moment to process
+              Processing fresh data for security and accuracy
             </p>
           </div>
         </div>
@@ -491,7 +422,7 @@ export function LogCharts({ logs }: LogChartsProps) {
   return (
     <div className="space-y-6">
       {/* ========================================================================
-          CACHE STATUS AND PERFORMANCE NOTICE
+          PERFORMANCE NOTICE FOR LARGE DATASETS
           ======================================================================== */}
       {logs.length > LARGE_DATASET_THRESHOLD && (
         <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 transition-colors duration-200">
@@ -499,15 +430,14 @@ export function LogCharts({ logs }: LogChartsProps) {
             <AlertCircle className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
             <div>
               <h4 className="text-sm font-medium text-blue-800 dark:text-blue-300">
-                Large Dataset Optimization
-                {chartCache && <span className="ml-2 text-xs bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 px-2 py-1 rounded">Cached</span>}
+                Large Dataset Processing
               </h4>
               <p className="text-sm text-blue-700 dark:text-blue-400 mt-1">
                 {logs.length > VERY_LARGE_DATASET_THRESHOLD 
                   ? `Dataset contains ${logs.length.toLocaleString()} entries. Applied intelligent sampling for optimal performance.`
                   : `Processing ${logs.length.toLocaleString()} entries with performance optimizations enabled.`
                 }
-                {chartCache && <span className="block mt-1 text-xs">Charts are cached - switching tabs won't reload data.</span>}
+                <span className="block mt-1">Fresh data processing ensures security and accuracy - no caching applied.</span>
               </p>
             </div>
           </div>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { FileUpload } from './components/FileUpload';
 import { LogSummary } from './components/LogSummary';
-import { LogCharts, clearChartCache } from './components/LogCharts';
+import { LogCharts } from './components/LogCharts';
 import { LogTable } from './components/LogTable';
 import { ReportGenerator } from './components/ReportGenerator';
 import { GeminiChatbot } from './components/GeminiChatbot';
@@ -34,6 +34,7 @@ interface AddedContent {
  * 5. AI Integration - Optional AI assistant for enhanced insights
  * 
  * The app maintains all analysis state and coordinates between components.
+ * No data caching is implemented to ensure fresh processing and data security.
  */
 function App() {
   // ============================================================================
@@ -125,13 +126,14 @@ function App() {
    * 3. Updates application state with results
    * 4. Saves session metadata to database (without log content)
    * 
+   * No caching is applied to ensure fresh processing every time
+   * 
    * @param content - Raw text content of the uploaded log file
    * @param fileName - Original filename for reference
    */
   const handleFileUpload = async (content: string, fileName: string) => {
     try {
-      // Clear any existing chart cache before processing new file
-      clearChartCache();
+      console.log('Starting fresh log file processing...');
       
       // Parse log file content into structured LogEntry objects
       // This handles various log formats and extracts timestamps, levels, messages
@@ -146,6 +148,8 @@ function App() {
       setSummary(logSummary);
       setFilename(fileName);
       setActiveTab('summary'); // Navigate to summary view
+
+      console.log(`Processed ${parsedLogs.length} log entries from ${fileName}`);
 
       // Save analysis session metadata to database
       // IMPORTANT: Only metadata is saved, never actual log content
@@ -178,13 +182,12 @@ function App() {
    * 
    * Clears all analysis data and returns to file upload screen
    * Includes visual feedback for better user experience
-   * Now properly clears chart cache to ensure fresh data processing
+   * No cache clearing needed since we don't cache data
    */
   const handleReset = async () => {
     setIsResetting(true);
     
-    // Clear chart cache to ensure fresh processing on next upload
-    clearChartCache();
+    console.log('Resetting application state...');
     
     // Clear all analysis state including AI-generated content
     setLogs([]);
@@ -196,6 +199,7 @@ function App() {
     // Small delay for better UX - shows loading state briefly
     setTimeout(() => {
       setIsResetting(false);
+      console.log('Application reset complete');
     }, 300);
   };
 
@@ -440,6 +444,7 @@ function App() {
                 <p className="text-sm text-green-700 dark:text-green-400 mt-1">
                   Log content is processed locally and never stored in the database. 
                   Only analysis metadata (timestamps, counts) is saved for session tracking.
+                  No data caching ensures fresh processing and maximum security.
                 </p>
               </div>
             </div>
