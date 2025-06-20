@@ -16,7 +16,7 @@ import { Line, Bar, Doughnut } from 'react-chartjs-2';
 import 'chartjs-adapter-date-fns';
 import { LogEntry } from '../types/log';
 import { format, startOfMinute, endOfMinute, eachMinuteOfInterval, differenceInMinutes, startOfHour, endOfHour, eachHourOfInterval, addMinutes } from 'date-fns';
-import { Loader2, AlertCircle, Clock } from 'lucide-react';
+import { Loader2, AlertCircle, Clock, BarChart3, TrendingUp, PieChart } from 'lucide-react';
 
 ChartJS.register(
   CategoryScale,
@@ -44,28 +44,12 @@ interface ChartCache {
   data: {
     validLogs: LogEntry[];
     levelCounts: Record<string, number>;
-    timelineDataCache: Record<string, any[]>; // Cache for different intervals
     timeRange: { start: Date; end: Date };
   };
 }
 
 // Global chart cache - persists across component unmounts
 let chartCache: ChartCache | null = null;
-
-/**
- * Time interval options similar to Grafana
- */
-const TIME_INTERVALS = [
-  { value: '1m', label: '1 minute', minutes: 1 },
-  { value: '5m', label: '5 minutes', minutes: 5 },
-  { value: '15m', label: '15 minutes', minutes: 15 },
-  { value: '30m', label: '30 minutes', minutes: 30 },
-  { value: '1h', label: '1 hour', minutes: 60 },
-  { value: '2h', label: '2 hours', minutes: 120 },
-  { value: '6h', label: '6 hours', minutes: 360 },
-  { value: '12h', label: '12 hours', minutes: 720 },
-  { value: '1d', label: '1 day', minutes: 1440 },
-];
 
 /**
  * Generate a simple hash from logs array for cache validation
@@ -86,18 +70,17 @@ function generateLogsHash(logs: LogEntry[]): string {
  * This component renders interactive charts for log analysis with special handling
  * for large datasets to prevent UI freezing and provide smooth user experience.
  * 
- * New Features:
+ * Features:
  * - Chart data caching to prevent reprocessing when switching tabs
- * - TRACE log level support in timeline charts
- * - Line chart timeline with customizable time intervals (Grafana-style)
- * - Time interval selector for better data exploration
+ * - TRACE log level support in charts
+ * - Performance optimizations for large datasets
+ * - Coming soon section for future chart additions
  * 
  * Performance Features:
  * - Async data processing with loading states
  * - Data sampling for very large datasets
  * - Progressive rendering with user feedback
  * - Memory-efficient chart data preparation
- * - Intelligent time interval selection based on data size
  * - Chart data caching across tab switches
  * 
  * The component uses React hooks to manage async processing and provides
@@ -127,21 +110,8 @@ export function LogCharts({ logs }: LogChartsProps) {
   const [chartData, setChartData] = useState<{
     validLogs: LogEntry[];
     levelCounts: Record<string, number>;
-    timelineDataCache: Record<string, any[]>;
     timeRange: { start: Date; end: Date };
   } | null>(null);
-
-  /**
-   * Selected time interval for timeline chart
-   * Allows users to customize the granularity of the timeline view
-   */
-  const [selectedInterval, setSelectedInterval] = useState('30m');
-
-  /**
-   * Loading state for interval changes
-   * Shows feedback when switching between time intervals
-   */
-  const [isChangingInterval, setIsChangingInterval] = useState(false);
 
   // ============================================================================
   // PERFORMANCE CONSTANTS
@@ -152,7 +122,6 @@ export function LogCharts({ logs }: LogChartsProps) {
    */
   const LARGE_DATASET_THRESHOLD = 10000;  // Show loading for datasets larger than this
   const VERY_LARGE_DATASET_THRESHOLD = 50000;  // Apply aggressive sampling for datasets larger than this
-  const MAX_TIMELINE_POINTS = 500;  // Maximum number of points on timeline charts
 
   // ============================================================================
   // ASYNC DATA PROCESSING EFFECT WITH CACHING
@@ -224,54 +193,6 @@ export function LogCharts({ logs }: LogChartsProps) {
   }, [logs]);
 
   // ============================================================================
-  // INTERVAL CHANGE HANDLER
-  // ============================================================================
-  
-  /**
-   * Handle time interval changes with loading feedback
-   * Processes new interval data if not already cached
-   */
-  const handleIntervalChange = async (newInterval: string) => {
-    if (!chartData) return;
-    
-    setIsChangingInterval(true);
-    setSelectedInterval(newInterval);
-    
-    try {
-      // Check if this interval is already cached
-      if (!chartData.timelineDataCache[newInterval]) {
-        // Process new interval data
-        await new Promise(resolve => setTimeout(resolve, 10)); // Yield control
-        
-        const intervalConfig = TIME_INTERVALS.find(i => i.value === newInterval);
-        if (intervalConfig) {
-          const newTimelineData = await processTimelineData(chartData.validLogs, chartData.timeRange, intervalConfig.minutes);
-          
-          // Update cache
-          const updatedData = {
-            ...chartData,
-            timelineDataCache: {
-              ...chartData.timelineDataCache,
-              [newInterval]: newTimelineData
-            }
-          };
-          
-          setChartData(updatedData);
-          
-          // Update global cache
-          if (chartCache) {
-            chartCache.data = updatedData;
-          }
-        }
-      }
-    } catch (error) {
-      console.error('Error changing interval:', error);
-    } finally {
-      setIsChangingInterval(false);
-    }
-  };
-
-  // ============================================================================
   // ASYNC DATA PROCESSING FUNCTION
   // ============================================================================
   
@@ -280,7 +201,7 @@ export function LogCharts({ logs }: LogChartsProps) {
    * 
    * This function handles the heavy computation of chart data preparation
    * with special optimizations for large datasets including data sampling
-   * and intelligent time interval selection.
+   * and intelligent processing.
    * 
    * @param logs - Array of log entries to process
    * @returns Promise resolving to processed chart data
@@ -346,130 +267,11 @@ export function LogCharts({ logs }: LogChartsProps) {
       end: new Date(Math.max(...validLogs.map(log => log.timestamp!.getTime()))),
     };
 
-    // ========================================================================
-    // STEP 5: DETERMINE OPTIMAL DEFAULT INTERVAL
-    // ========================================================================
-    
-    const totalMinutes = differenceInMinutes(timeRange.end, timeRange.start);
-    let defaultInterval = '30m';
-    
-    // Auto-select appropriate interval based on time range
-    if (totalMinutes <= 60) {
-      defaultInterval = '1m';
-    } else if (totalMinutes <= 300) {
-      defaultInterval = '5m';
-    } else if (totalMinutes <= 900) {
-      defaultInterval = '15m';
-    } else if (totalMinutes <= 1440) {
-      defaultInterval = '30m';
-    } else if (totalMinutes <= 4320) {
-      defaultInterval = '1h';
-    } else if (totalMinutes <= 10080) {
-      defaultInterval = '2h';
-    } else {
-      defaultInterval = '6h';
-    }
-
-    // Update selected interval if it's still the default
-    if (selectedInterval === '30m') {
-      setSelectedInterval(defaultInterval);
-    }
-
-    // ========================================================================
-    // STEP 6: PROCESS DEFAULT INTERVAL DATA
-    // ========================================================================
-    
-    const defaultIntervalConfig = TIME_INTERVALS.find(i => i.value === defaultInterval);
-    const defaultTimelineData = await processTimelineData(validLogs, timeRange, defaultIntervalConfig?.minutes || 30);
-
-    const timelineDataCache: Record<string, any[]> = {
-      [defaultInterval]: defaultTimelineData
-    };
-
     return {
       validLogs,
       levelCounts,
-      timelineDataCache,
       timeRange
     };
-  };
-
-  // ============================================================================
-  // TIMELINE DATA PROCESSING FUNCTION
-  // ============================================================================
-  
-  /**
-   * Process timeline data for a specific interval
-   * 
-   * @param validLogs - Filtered log entries with valid timestamps
-   * @param timeRange - Start and end time range
-   * @param intervalMinutes - Interval size in minutes
-   * @returns Promise resolving to timeline data array
-   */
-  const processTimelineData = async (validLogs: LogEntry[], timeRange: { start: Date; end: Date }, intervalMinutes: number) => {
-    // Generate time intervals based on the specified minutes
-    let timeIntervals: Date[] = [];
-    let currentTime = new Date(timeRange.start);
-    
-    // Round down to nearest interval mark
-    const roundedMinutes = Math.floor(currentTime.getMinutes() / intervalMinutes) * intervalMinutes;
-    currentTime.setMinutes(roundedMinutes, 0, 0);
-    
-    while (currentTime <= timeRange.end) {
-      timeIntervals.push(new Date(currentTime));
-      currentTime = addMinutes(currentTime, intervalMinutes);
-    }
-
-    // Limit number of points for performance
-    if (timeIntervals.length > MAX_TIMELINE_POINTS) {
-      const sampleRate = Math.ceil(timeIntervals.length / MAX_TIMELINE_POINTS);
-      timeIntervals = timeIntervals.filter((_, index) => index % sampleRate === 0);
-    }
-
-    // Yield control to prevent UI blocking
-    await new Promise(resolve => setTimeout(resolve, 5));
-
-    // ========================================================================
-    // GROUP LOGS BY TIME INTERVALS (INCLUDING TRACE)
-    // ========================================================================
-    
-    /**
-     * Process timeline data in chunks to prevent UI blocking
-     * Groups log entries by specified intervals for timeline visualization
-     * Includes all log levels including TRACE
-     */
-    const timelineData = [];
-    const chunkSize = 50; // Process intervals in chunks
-    
-    for (let i = 0; i < timeIntervals.length; i += chunkSize) {
-      const chunk = timeIntervals.slice(i, i + chunkSize);
-      
-      for (const interval of chunk) {
-        const intervalStart = new Date(interval);
-        const intervalEnd = addMinutes(interval, intervalMinutes);
-        
-        const logsInInterval = validLogs.filter(log => 
-          log.timestamp! >= intervalStart && log.timestamp! < intervalEnd
-        );
-
-        timelineData.push({
-          time: interval,
-          total: logsInInterval.length,
-          errors: logsInInterval.filter(log => log.level === 'ERROR').length,
-          warnings: logsInInterval.filter(log => log.level === 'WARN').length,
-          info: logsInInterval.filter(log => log.level === 'INFO').length,
-          debug: logsInInterval.filter(log => log.level === 'DEBUG').length,
-          trace: logsInInterval.filter(log => log.level === 'TRACE').length,
-        });
-      }
-      
-      // Yield control after each chunk to prevent UI blocking
-      if (i + chunkSize < timeIntervals.length) {
-        await new Promise(resolve => setTimeout(resolve, 1));
-      }
-    }
-
-    return timelineData;
   };
 
   // ============================================================================
@@ -478,22 +280,18 @@ export function LogCharts({ logs }: LogChartsProps) {
   
   /**
    * Memoized chart data objects to prevent unnecessary re-renders
-   * Only recalculates when processed chart data or selected interval changes
-   * Now includes TRACE level in all chart configurations with line chart timeline
+   * Only recalculates when processed chart data changes
+   * Now includes TRACE level in all chart configurations
    */
-  const { levelData, timelineChartData, chartOptions, lineChartOptions, doughnutOptions } = useMemo(() => {
+  const { levelData, doughnutOptions } = useMemo(() => {
     if (!chartData) {
       return {
         levelData: null,
-        timelineChartData: null,
-        chartOptions: null,
-        lineChartOptions: null,
         doughnutOptions: null
       };
     }
 
-    const { levelCounts, timelineDataCache } = chartData;
-    const timelineData = timelineDataCache[selectedInterval] || [];
+    const { levelCounts } = chartData;
 
     // ========================================================================
     // LEVEL DISTRIBUTION CHART DATA (INCLUDING TRACE)
@@ -521,192 +319,6 @@ export function LogCharts({ logs }: LogChartsProps) {
           borderWidth: 0,
         },
       ],
-    };
-
-    // ========================================================================
-    // TIMELINE CHART DATA (LINE CHART WITH TRACE)
-    // ========================================================================
-    
-    const intervalConfig = TIME_INTERVALS.find(i => i.value === selectedInterval);
-    const formatString = intervalConfig && intervalConfig.minutes >= 60 ? 'HH:mm' : 'HH:mm';
-    
-    /**
-     * Enhanced timeline chart with all log levels including TRACE
-     * Uses line chart for better trend visualization and pattern recognition
-     * Each log level gets its own line with consistent colors and styling
-     */
-    const timelineChartData = {
-      labels: timelineData.map(d => format(d.time, formatString)),
-      datasets: [
-        {
-          label: 'Errors',
-          data: timelineData.map(d => d.errors),
-          borderColor: levelColors.ERROR,
-          backgroundColor: levelColors.ERROR + '20', // 20% opacity
-          borderWidth: 2,
-          fill: false,
-          tension: 0.1, // Slight curve for smoother lines
-          pointRadius: timelineData.length > 100 ? 0 : 3, // Hide points for large datasets
-          pointHoverRadius: 5,
-        },
-        {
-          label: 'Warnings',
-          data: timelineData.map(d => d.warnings),
-          borderColor: levelColors.WARN,
-          backgroundColor: levelColors.WARN + '20',
-          borderWidth: 2,
-          fill: false,
-          tension: 0.1,
-          pointRadius: timelineData.length > 100 ? 0 : 3,
-          pointHoverRadius: 5,
-        },
-        {
-          label: 'Info',
-          data: timelineData.map(d => d.info),
-          borderColor: levelColors.INFO,
-          backgroundColor: levelColors.INFO + '20',
-          borderWidth: 2,
-          fill: false,
-          tension: 0.1,
-          pointRadius: timelineData.length > 100 ? 0 : 3,
-          pointHoverRadius: 5,
-        },
-        {
-          label: 'Debug',
-          data: timelineData.map(d => d.debug),
-          borderColor: levelColors.DEBUG,
-          backgroundColor: levelColors.DEBUG + '20',
-          borderWidth: 2,
-          fill: false,
-          tension: 0.1,
-          pointRadius: timelineData.length > 100 ? 0 : 3,
-          pointHoverRadius: 5,
-        },
-        {
-          label: 'Trace',
-          data: timelineData.map(d => d.trace),
-          borderColor: levelColors.TRACE,
-          backgroundColor: levelColors.TRACE + '20',
-          borderWidth: 2,
-          fill: false,
-          tension: 0.1,
-          pointRadius: timelineData.length > 100 ? 0 : 3,
-          pointHoverRadius: 5,
-        },
-      ],
-    };
-
-    // ========================================================================
-    // CHART OPTIONS WITH PERFORMANCE OPTIMIZATIONS
-    // ========================================================================
-    
-    const chartOptions = {
-      responsive: true,
-      maintainAspectRatio: false,
-      // Performance optimizations for large datasets
-      animation: timelineData.length > 100 ? false : {
-        duration: 300,
-      },
-      interaction: {
-        intersect: false,
-        mode: 'index' as const,
-      },
-      plugins: {
-        legend: {
-          position: 'top' as const,
-          labels: {
-            color: document.documentElement.classList.contains('dark') ? '#e5e7eb' : '#374151',
-            usePointStyle: true, // Use colored circles instead of lines
-            padding: 15, // Add spacing between legend items
-          },
-        },
-        title: {
-          display: false,
-        },
-        // Enhanced tooltips for better data visibility
-        tooltip: {
-          enabled: timelineData.length <= 200,
-          mode: 'index' as const,
-          intersect: false,
-          backgroundColor: 'rgba(0, 0, 0, 0.8)',
-          titleColor: '#ffffff',
-          bodyColor: '#ffffff',
-          borderColor: '#374151',
-          borderWidth: 1,
-        },
-      },
-      scales: {
-        x: {
-          title: {
-            display: true,
-            text: `Time (${intervalConfig?.label || selectedInterval} intervals)`,
-            color: document.documentElement.classList.contains('dark') ? '#9ca3af' : '#6b7280',
-          },
-          ticks: {
-            maxTicksLimit: Math.min(20, Math.ceil(timelineData.length / 10)),
-            color: document.documentElement.classList.contains('dark') ? '#9ca3af' : '#6b7280',
-          },
-          grid: {
-            color: document.documentElement.classList.contains('dark') ? '#374151' : '#e5e7eb',
-          },
-        },
-        y: {
-          beginAtZero: true,
-          title: {
-            display: true,
-            text: 'Number of Log Entries',
-            color: document.documentElement.classList.contains('dark') ? '#9ca3af' : '#6b7280',
-          },
-          ticks: {
-            stepSize: 1,
-            color: document.documentElement.classList.contains('dark') ? '#9ca3af' : '#6b7280',
-          },
-          grid: {
-            color: document.documentElement.classList.contains('dark') ? '#374151' : '#e5e7eb',
-          },
-        },
-      },
-    };
-
-    /**
-     * Enhanced line chart options for timeline visualization
-     * Optimized for trend analysis and pattern recognition
-     */
-    const lineChartOptions = {
-      ...chartOptions,
-      plugins: {
-        ...chartOptions.plugins,
-        legend: {
-          ...chartOptions.plugins.legend,
-          labels: {
-            ...chartOptions.plugins.legend.labels,
-            generateLabels: (chart: any) => {
-              const original = ChartJS.defaults.plugins.legend.labels.generateLabels;
-              const labels = original.call(this, chart);
-              
-              // Enhance legend labels with line styling
-              labels.forEach((label: any, index: number) => {
-                label.fillStyle = chart.data.datasets[index].borderColor;
-                label.strokeStyle = chart.data.datasets[index].borderColor;
-                label.lineWidth = 3;
-              });
-              
-              return labels;
-            },
-          },
-        },
-      },
-      scales: {
-        ...chartOptions.scales,
-        y: {
-          ...chartOptions.scales.y,
-          title: {
-            display: true,
-            text: 'Log Count by Level',
-            color: document.documentElement.classList.contains('dark') ? '#9ca3af' : '#6b7280',
-          },
-        },
-      },
     };
 
     const doughnutOptions = {
@@ -748,12 +360,9 @@ export function LogCharts({ logs }: LogChartsProps) {
 
     return {
       levelData,
-      timelineChartData,
-      chartOptions,
-      lineChartOptions,
       doughnutOptions
     };
-  }, [chartData, selectedInterval]);
+  }, [chartData]);
 
   // ============================================================================
   // LOADING STATE RENDER
@@ -833,8 +442,7 @@ export function LogCharts({ logs }: LogChartsProps) {
   // MAIN CHARTS RENDER
   // ============================================================================
   
-  const { validLogs, levelCounts, timelineDataCache, timeRange } = chartData;
-  const currentTimelineData = timelineDataCache[selectedInterval] || [];
+  const { validLogs, levelCounts, timeRange } = chartData;
 
   // ============================================================================
   // CALCULATE ACCURATE ERROR RATES
@@ -957,53 +565,67 @@ export function LogCharts({ logs }: LogChartsProps) {
       </div>
 
       {/* ======================================================================
-          ENHANCED LOG LEVELS TIMELINE (LINE CHART WITH TIME CONTROLS)
+          MORE CHARTS COMING SOON SECTION
           ====================================================================== */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 transition-colors duration-200">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
+      <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-lg border border-blue-200 dark:border-blue-800 p-8 transition-colors duration-200">
+        <div className="text-center space-y-6">
+          <div className="flex justify-center space-x-4">
+            <div className="bg-blue-100 dark:bg-blue-900/30 p-3 rounded-full">
+              <BarChart3 className="h-8 w-8 text-blue-600 dark:text-blue-400" />
+            </div>
+            <div className="bg-purple-100 dark:bg-purple-900/30 p-3 rounded-full">
+              <TrendingUp className="h-8 w-8 text-purple-600 dark:text-purple-400" />
+            </div>
+            <div className="bg-green-100 dark:bg-green-900/30 p-3 rounded-full">
+              <PieChart className="h-8 w-8 text-green-600 dark:text-green-400" />
+            </div>
+          </div>
+          
           <div>
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-              Log Levels Timeline - Trend Analysis
-              {currentTimelineData.length > MAX_TIMELINE_POINTS && (
-                <span className="text-sm font-normal text-gray-500 dark:text-gray-400 ml-2">
-                  (Optimized for performance)
-                </span>
-              )}
+            <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+              More Charts Coming Soon!
             </h3>
-            <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
-              Track log activity patterns over time with customizable intervals
+            <p className="text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
+              We're working on exciting new visualization features to help you analyze your logs even better. 
+              Stay tuned for timeline analysis, error pattern detection, and advanced filtering capabilities.
             </p>
           </div>
           
-          {/* Time Interval Selector */}
-          <div className="flex items-center space-x-2 mt-3 sm:mt-0">
-            <Clock className="h-4 w-4 text-gray-500 dark:text-gray-400" />
-            <span className="text-sm text-gray-600 dark:text-gray-300">Interval:</span>
-            <select
-              value={selectedInterval}
-              onChange={(e) => handleIntervalChange(e.target.value)}
-              disabled={isChangingInterval}
-              className="px-3 py-1 border border-gray-300 dark:border-gray-600 rounded-md text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors duration-200"
-            >
-              {TIME_INTERVALS.map(interval => (
-                <option key={interval.value} value={interval.value}>
-                  {interval.label}
-                </option>
-              ))}
-            </select>
-            {isChangingInterval && (
-              <Loader2 className="h-4 w-4 animate-spin text-blue-600 dark:text-blue-400" />
-            )}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-8">
+            <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700 transition-colors duration-200">
+              <div className="flex items-center space-x-2 mb-2">
+                <TrendingUp className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                <h4 className="font-semibold text-gray-900 dark:text-white">Timeline Analysis</h4>
+              </div>
+              <p className="text-sm text-gray-600 dark:text-gray-300">
+                Interactive timeline charts with customizable intervals and trend analysis
+              </p>
+            </div>
+            
+            <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700 transition-colors duration-200">
+              <div className="flex items-center space-x-2 mb-2">
+                <BarChart3 className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                <h4 className="font-semibold text-gray-900 dark:text-white">Error Patterns</h4>
+              </div>
+              <p className="text-sm text-gray-600 dark:text-gray-300">
+                Advanced pattern recognition and error correlation analysis
+              </p>
+            </div>
+            
+            <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700 transition-colors duration-200">
+              <div className="flex items-center space-x-2 mb-2">
+                <PieChart className="h-5 w-5 text-green-600 dark:text-green-400" />
+                <h4 className="font-semibold text-gray-900 dark:text-white">Custom Views</h4>
+              </div>
+              <p className="text-sm text-gray-600 dark:text-gray-300">
+                Personalized dashboards and custom chart configurations
+              </p>
+            </div>
           </div>
-        </div>
-        
-        <div className="h-80">
-          {timelineChartData && <Line data={timelineChartData} options={lineChartOptions} />}
-        </div>
-        
-        <div className="mt-3 text-xs text-gray-500 dark:text-gray-400 text-center">
-          {currentTimelineData.length} data points • {TIME_INTERVALS.find(i => i.value === selectedInterval)?.label} intervals
-          {currentTimelineData.length > 100 && " • Points hidden for clarity, hover to see values"}
+          
+          <div className="mt-6 text-sm text-gray-500 dark:text-gray-400">
+            Have suggestions for new chart types? Let us know what visualizations would help your log analysis workflow!
+          </div>
         </div>
       </div>
     </div>
