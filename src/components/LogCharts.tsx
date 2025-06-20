@@ -36,10 +36,47 @@ interface LogChartsProps {
 }
 
 /**
- * LogCharts Component with Performance Optimizations
+ * Chart cache to store processed chart data
+ * Prevents reprocessing when switching between tabs
+ */
+interface ChartCache {
+  logsHash: string;
+  data: {
+    validLogs: LogEntry[];
+    levelCounts: Record<string, number>;
+    timelineData: any[];
+    timeRange: { start: Date; end: Date };
+    useHourlyInterval: boolean;
+  };
+}
+
+// Global chart cache - persists across component unmounts
+let chartCache: ChartCache | null = null;
+
+/**
+ * Generate a simple hash from logs array for cache validation
+ * Uses log count and first/last entries to detect changes
+ */
+function generateLogsHash(logs: LogEntry[]): string {
+  if (!logs || logs.length === 0) return 'empty';
+  
+  const firstLog = logs[0];
+  const lastLog = logs[logs.length - 1];
+  
+  return `${logs.length}-${firstLog?.id || 'none'}-${lastLog?.id || 'none'}-${firstLog?.timestamp?.getTime() || 0}`;
+}
+
+/**
+ * LogCharts Component with Performance Optimizations and Caching
  * 
  * This component renders interactive charts for log analysis with special handling
  * for large datasets to prevent UI freezing and provide smooth user experience.
+ * 
+ * New Features:
+ * - Chart data caching to prevent reprocessing when switching tabs
+ * - TRACE log level support in timeline charts
+ * - Improved stacked bar chart visualization
+ * - Better visual separation of log levels
  * 
  * Performance Features:
  * - Async data processing with loading states
@@ -47,13 +84,14 @@ interface LogChartsProps {
  * - Progressive rendering with user feedback
  * - Memory-efficient chart data preparation
  * - Intelligent time interval selection based on data size
+ * - Chart data caching across tab switches
  * 
  * The component uses React hooks to manage async processing and provides
  * visual feedback during chart preparation for datasets over 10,000 entries.
  */
 export function LogCharts({ logs }: LogChartsProps) {
   // ============================================================================
-  // STATE MANAGEMENT FOR PERFORMANCE
+  // STATE MANAGEMENT FOR PERFORMANCE AND CACHING
   // ============================================================================
   
   /**
@@ -92,22 +130,36 @@ export function LogCharts({ logs }: LogChartsProps) {
   const MAX_TIMELINE_POINTS = 500;  // Maximum number of points on timeline charts
 
   // ============================================================================
-  // ASYNC DATA PROCESSING EFFECT
+  // ASYNC DATA PROCESSING EFFECT WITH CACHING
   // ============================================================================
   
   /**
-   * Effect to process log data asynchronously
+   * Effect to process log data asynchronously with intelligent caching
    * 
    * This effect runs whenever the logs prop changes and handles:
+   * - Cache validation and retrieval
    * - Large dataset detection and user feedback
    * - Async processing to prevent UI blocking
    * - Data sampling and optimization for performance
    * - Error handling and recovery
+   * - Cache storage for future use
    */
   useEffect(() => {
     const processLogData = async () => {
-      // Reset states
+      // Reset error state
       setProcessingError(null);
+      
+      // Generate hash for current logs to check cache validity
+      const currentHash = generateLogsHash(logs);
+      
+      // Check if we have valid cached data
+      if (chartCache && chartCache.logsHash === currentHash) {
+        console.log('Using cached chart data');
+        setChartData(chartCache.data);
+        return;
+      }
+      
+      // Clear existing chart data
       setChartData(null);
       
       // Show loading for large datasets
@@ -120,7 +172,15 @@ export function LogCharts({ logs }: LogChartsProps) {
         // This prevents the UI from freezing during processing
         await new Promise(resolve => setTimeout(resolve, 10));
 
+        console.log('Processing new chart data...');
         const processedData = await processChartsData(logs);
+        
+        // Store in cache for future use
+        chartCache = {
+          logsHash: currentHash,
+          data: processedData
+        };
+        
         setChartData(processedData);
       } catch (error) {
         console.error('Error processing chart data:', error);
@@ -134,6 +194,7 @@ export function LogCharts({ logs }: LogChartsProps) {
       processLogData();
     } else {
       setChartData(null);
+      chartCache = null; // Clear cache when no logs
     }
   }, [logs]);
 
@@ -246,12 +307,13 @@ export function LogCharts({ logs }: LogChartsProps) {
     await new Promise(resolve => setTimeout(resolve, 5));
 
     // ========================================================================
-    // STEP 5: GROUP LOGS BY TIME INTERVALS
+    // STEP 5: GROUP LOGS BY TIME INTERVALS (INCLUDING TRACE)
     // ========================================================================
     
     /**
      * Process timeline data in chunks to prevent UI blocking
      * Groups log entries by time intervals for timeline visualization
+     * Now includes TRACE level logs for complete analysis
      */
     const timelineData = [];
     const chunkSize = 50; // Process intervals in chunks
@@ -281,6 +343,7 @@ export function LogCharts({ logs }: LogChartsProps) {
           warnings: logsInInterval.filter(log => log.level === 'WARN').length,
           info: logsInInterval.filter(log => log.level === 'INFO').length,
           debug: logsInInterval.filter(log => log.level === 'DEBUG').length,
+          trace: logsInInterval.filter(log => log.level === 'TRACE').length, // Added TRACE support
         });
       }
       
@@ -306,6 +369,7 @@ export function LogCharts({ logs }: LogChartsProps) {
   /**
    * Memoized chart data objects to prevent unnecessary re-renders
    * Only recalculates when processed chart data changes
+   * Now includes TRACE level in all chart configurations
    */
   const { levelData, timelineChartData, chartOptions, barChartOptions, doughnutOptions } = useMemo(() => {
     if (!chartData) {
@@ -321,7 +385,7 @@ export function LogCharts({ logs }: LogChartsProps) {
     const { levelCounts, timelineData, useHourlyInterval } = chartData;
 
     // ========================================================================
-    // LEVEL DISTRIBUTION CHART DATA
+    // LEVEL DISTRIBUTION CHART DATA (INCLUDING TRACE)
     // ========================================================================
     
     const levelColors = {
@@ -349,11 +413,15 @@ export function LogCharts({ logs }: LogChartsProps) {
     };
 
     // ========================================================================
-    // TIMELINE CHART DATA
+    // TIMELINE CHART DATA (STACKED BAR CHART WITH TRACE)
     // ========================================================================
     
     const formatString = 'HH:mm';
     
+    /**
+     * Enhanced timeline chart with all log levels including TRACE
+     * Uses stacked bar chart for better visual separation and clarity
+     */
     const timelineChartData = {
       labels: timelineData.map(d => format(d.time, formatString)),
       datasets: [
@@ -363,6 +431,7 @@ export function LogCharts({ logs }: LogChartsProps) {
           backgroundColor: levelColors.ERROR,
           borderColor: levelColors.ERROR,
           borderWidth: 1,
+          borderSkipped: false, // Show borders on all sides for better separation
         },
         {
           label: 'Warnings',
@@ -370,6 +439,7 @@ export function LogCharts({ logs }: LogChartsProps) {
           backgroundColor: levelColors.WARN,
           borderColor: levelColors.WARN,
           borderWidth: 1,
+          borderSkipped: false,
         },
         {
           label: 'Info',
@@ -377,6 +447,7 @@ export function LogCharts({ logs }: LogChartsProps) {
           backgroundColor: levelColors.INFO,
           borderColor: levelColors.INFO,
           borderWidth: 1,
+          borderSkipped: false,
         },
         {
           label: 'Debug',
@@ -384,6 +455,15 @@ export function LogCharts({ logs }: LogChartsProps) {
           backgroundColor: levelColors.DEBUG,
           borderColor: levelColors.DEBUG,
           borderWidth: 1,
+          borderSkipped: false,
+        },
+        {
+          label: 'Trace',
+          data: timelineData.map(d => d.trace),
+          backgroundColor: levelColors.TRACE,
+          borderColor: levelColors.TRACE,
+          borderWidth: 1,
+          borderSkipped: false,
         },
       ],
     };
@@ -408,14 +488,23 @@ export function LogCharts({ logs }: LogChartsProps) {
           position: 'top' as const,
           labels: {
             color: document.documentElement.classList.contains('dark') ? '#e5e7eb' : '#374151',
+            usePointStyle: true, // Use colored squares instead of lines
+            padding: 15, // Add spacing between legend items
           },
         },
         title: {
           display: false,
         },
-        // Disable tooltips for very large datasets to improve performance
+        // Enhanced tooltips for better data visibility
         tooltip: {
           enabled: timelineData.length <= 200,
+          mode: 'index' as const,
+          intersect: false,
+          backgroundColor: 'rgba(0, 0, 0, 0.8)',
+          titleColor: '#ffffff',
+          bodyColor: '#ffffff',
+          borderColor: '#374151',
+          borderWidth: 1,
         },
       },
       scales: {
@@ -432,6 +521,7 @@ export function LogCharts({ logs }: LogChartsProps) {
           grid: {
             color: document.documentElement.classList.contains('dark') ? '#374151' : '#e5e7eb',
           },
+          stacked: true, // Enable stacking for x-axis
         },
         y: {
           beginAtZero: true,
@@ -447,19 +537,45 @@ export function LogCharts({ logs }: LogChartsProps) {
           grid: {
             color: document.documentElement.classList.contains('dark') ? '#374151' : '#e5e7eb',
           },
+          stacked: true, // Enable stacking for y-axis
         },
       },
     };
 
+    /**
+     * Enhanced bar chart options with improved stacking and visual clarity
+     */
     const barChartOptions = {
       ...chartOptions,
+      plugins: {
+        ...chartOptions.plugins,
+        legend: {
+          ...chartOptions.plugins.legend,
+          labels: {
+            ...chartOptions.plugins.legend.labels,
+            generateLabels: (chart: any) => {
+              const original = ChartJS.defaults.plugins.legend.labels.generateLabels;
+              const labels = original.call(this, chart);
+              
+              // Enhance legend labels with better styling
+              labels.forEach((label: any, index: number) => {
+                label.fillStyle = chart.data.datasets[index].backgroundColor;
+                label.strokeStyle = chart.data.datasets[index].borderColor;
+                label.lineWidth = 2;
+              });
+              
+              return labels;
+            },
+          },
+        },
+      },
       scales: {
         ...chartOptions.scales,
         y: {
           ...chartOptions.scales.y,
           title: {
             display: true,
-            text: 'Log Count by Level',
+            text: 'Log Count by Level (Stacked)',
             color: document.documentElement.classList.contains('dark') ? '#9ca3af' : '#6b7280',
           },
           stacked: true,
@@ -482,10 +598,28 @@ export function LogCharts({ logs }: LogChartsProps) {
           position: 'bottom' as const,
           labels: {
             color: document.documentElement.classList.contains('dark') ? '#e5e7eb' : '#374151',
+            usePointStyle: true,
+            padding: 15,
           },
         },
         title: {
           display: false,
+        },
+        tooltip: {
+          backgroundColor: 'rgba(0, 0, 0, 0.8)',
+          titleColor: '#ffffff',
+          bodyColor: '#ffffff',
+          borderColor: '#374151',
+          borderWidth: 1,
+          callbacks: {
+            label: function(context: any) {
+              const label = context.label || '';
+              const value = context.parsed || 0;
+              const total = context.dataset.data.reduce((a: number, b: number) => a + b, 0);
+              const percentage = ((value / total) * 100).toFixed(1);
+              return `${label}: ${value.toLocaleString()} (${percentage}%)`;
+            }
+          }
         },
       },
     };
@@ -582,19 +716,23 @@ export function LogCharts({ logs }: LogChartsProps) {
   return (
     <div className="space-y-6">
       {/* ========================================================================
-          PERFORMANCE NOTICE FOR LARGE DATASETS
+          CACHE STATUS AND PERFORMANCE NOTICE
           ======================================================================== */}
       {logs.length > LARGE_DATASET_THRESHOLD && (
         <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 transition-colors duration-200">
           <div className="flex items-start space-x-2">
             <AlertCircle className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
             <div>
-              <h4 className="text-sm font-medium text-blue-800 dark:text-blue-300">Large Dataset Optimization</h4>
+              <h4 className="text-sm font-medium text-blue-800 dark:text-blue-300">
+                Large Dataset Optimization
+                {chartCache && <span className="ml-2 text-xs bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 px-2 py-1 rounded">Cached</span>}
+              </h4>
               <p className="text-sm text-blue-700 dark:text-blue-400 mt-1">
                 {logs.length > VERY_LARGE_DATASET_THRESHOLD 
                   ? `Dataset contains ${logs.length.toLocaleString()} entries. Applied intelligent sampling for optimal performance.`
                   : `Processing ${logs.length.toLocaleString()} entries with performance optimizations enabled.`
                 }
+                {chartCache && <span className="block mt-1 text-xs">Charts are cached - switching tabs won't reload data.</span>}
               </p>
             </div>
           </div>
@@ -602,10 +740,10 @@ export function LogCharts({ logs }: LogChartsProps) {
       )}
 
       {/* ========================================================================
-          SUMMARY STATS
+          SUMMARY STATS (INCLUDING TRACE)
           ======================================================================== */}
       <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 transition-colors duration-200">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-center">
           <div>
             <div className="text-2xl font-bold text-gray-900 dark:text-white">{logs.length.toLocaleString()}</div>
             <div className="text-sm text-gray-500 dark:text-gray-400">Total Entries</div>
@@ -621,6 +759,10 @@ export function LogCharts({ logs }: LogChartsProps) {
           <div>
             <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{(levelCounts.INFO || 0).toLocaleString()}</div>
             <div className="text-sm text-gray-500 dark:text-gray-400">Info</div>
+          </div>
+          <div>
+            <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">{(levelCounts.TRACE || 0).toLocaleString()}</div>
+            <div className="text-sm text-gray-500 dark:text-gray-400">Trace</div>
           </div>
         </div>
         <div className="mt-4 text-center text-sm text-gray-600 dark:text-gray-300">
@@ -640,7 +782,7 @@ export function LogCharts({ logs }: LogChartsProps) {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* ====================================================================
-            LOG LEVELS DISTRIBUTION
+            LOG LEVELS DISTRIBUTION (INCLUDING TRACE)
             ==================================================================== */}
         <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 transition-colors duration-200">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Log Levels Distribution</h3>
@@ -674,17 +816,20 @@ export function LogCharts({ logs }: LogChartsProps) {
       </div>
 
       {/* ======================================================================
-          LOG LEVELS TIMELINE
+          ENHANCED LOG LEVELS TIMELINE (STACKED BAR CHART WITH TRACE)
           ====================================================================== */}
       <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 transition-colors duration-200">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-          Log Levels Timeline ({useHourlyInterval ? 'Hourly' : 'Per Minute'})
+          Log Levels Timeline - Stacked Bar Chart ({useHourlyInterval ? 'Hourly' : 'Per Minute'})
           {timelineData.length > MAX_TIMELINE_POINTS && (
             <span className="text-sm font-normal text-gray-500 dark:text-gray-400 ml-2">
               (Optimized for performance)
             </span>
           )}
         </h3>
+        <div className="mb-3 text-sm text-gray-600 dark:text-gray-300">
+          Each bar shows the distribution of log levels at that time point. Colors stack to show total volume and composition.
+        </div>
         <div className="h-80">
           {timelineChartData && <Bar data={timelineChartData} options={barChartOptions} />}
         </div>
