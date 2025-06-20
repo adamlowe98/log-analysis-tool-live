@@ -15,7 +15,7 @@ import {
 import { Line, Bar, Doughnut } from 'react-chartjs-2';
 import 'chartjs-adapter-date-fns';
 import { LogEntry } from '../types/log';
-import { format, startOfMinute, endOfMinute, eachMinuteOfInterval, differenceInMinutes, startOfHour, endOfHour, eachHourOfInterval } from 'date-fns';
+import { format, startOfMinute, endOfMinute, eachMinuteOfInterval, differenceInMinutes, startOfHour, endOfHour, eachHourOfInterval, addMinutes } from 'date-fns';
 import { Loader2, AlertCircle } from 'lucide-react';
 
 ChartJS.register(
@@ -46,7 +46,7 @@ interface ChartCache {
     levelCounts: Record<string, number>;
     timelineData: any[];
     timeRange: { start: Date; end: Date };
-    useHourlyInterval: boolean;
+    intervalType: string;
   };
 }
 
@@ -75,7 +75,7 @@ function generateLogsHash(logs: LogEntry[]): string {
  * New Features:
  * - Chart data caching to prevent reprocessing when switching tabs
  * - TRACE log level support in timeline charts
- * - Improved stacked bar chart visualization
+ * - 30-minute interval timeline with grouped bars for better clarity
  * - Better visual separation of log levels
  * 
  * Performance Features:
@@ -115,7 +115,7 @@ export function LogCharts({ logs }: LogChartsProps) {
     levelCounts: Record<string, number>;
     timelineData: any[];
     timeRange: { start: Date; end: Date };
-    useHourlyInterval: boolean;
+    intervalType: string;
   } | null>(null);
 
   // ============================================================================
@@ -261,7 +261,7 @@ export function LogCharts({ logs }: LogChartsProps) {
     await new Promise(resolve => setTimeout(resolve, 5));
 
     // ========================================================================
-    // STEP 4: CALCULATE TIME RANGE AND INTERVALS
+    // STEP 4: CALCULATE TIME RANGE AND 30-MINUTE INTERVALS
     // ========================================================================
     
     if (validLogs.length === 0) {
@@ -276,31 +276,32 @@ export function LogCharts({ logs }: LogChartsProps) {
     const totalMinutes = differenceInMinutes(timeRange.end, timeRange.start);
     
     /**
-     * Intelligent interval selection based on data size and time range
-     * - For large datasets or long time ranges: use hourly intervals
-     * - For smaller datasets: use minute intervals
-     * - Limit total points to prevent chart performance issues
+     * Create 30-minute intervals for better granularity
+     * This provides a good balance between detail and readability
      */
-    let useHourlyInterval = totalMinutes > 120 || validLogs.length > LARGE_DATASET_THRESHOLD;
+    let intervalType = '30-minute';
+    let timeIntervals: Date[] = [];
     
-    // Further optimize for very large time ranges
-    if (totalMinutes > 1440) { // More than 24 hours
-      useHourlyInterval = true;
+    // Generate 30-minute intervals
+    let currentTime = new Date(timeRange.start);
+    // Round down to nearest 30-minute mark
+    currentTime.setMinutes(Math.floor(currentTime.getMinutes() / 30) * 30, 0, 0);
+    
+    while (currentTime <= timeRange.end) {
+      timeIntervals.push(new Date(currentTime));
+      currentTime = addMinutes(currentTime, 30);
     }
 
-    let timeIntervals: Date[];
-    
-    if (useHourlyInterval) {
-      timeIntervals = eachHourOfInterval({ start: timeRange.start, end: timeRange.end });
-    } else {
-      timeIntervals = eachMinuteOfInterval({ start: timeRange.start, end: timeRange.end });
-    }
-
-    // Limit timeline points for performance
+    // For very large time ranges, fall back to hourly intervals
     if (timeIntervals.length > MAX_TIMELINE_POINTS) {
-      const sampleRate = Math.ceil(timeIntervals.length / MAX_TIMELINE_POINTS);
-      timeIntervals = timeIntervals.filter((_, index) => index % sampleRate === 0);
-      useHourlyInterval = true; // Force hourly display for very dense data
+      intervalType = 'hourly';
+      timeIntervals = eachHourOfInterval({ start: timeRange.start, end: timeRange.end });
+      
+      // If still too many points, sample the intervals
+      if (timeIntervals.length > MAX_TIMELINE_POINTS) {
+        const sampleRate = Math.ceil(timeIntervals.length / MAX_TIMELINE_POINTS);
+        timeIntervals = timeIntervals.filter((_, index) => index % sampleRate === 0);
+      }
     }
 
     // Yield control to prevent UI blocking
@@ -312,7 +313,7 @@ export function LogCharts({ logs }: LogChartsProps) {
     
     /**
      * Process timeline data in chunks to prevent UI blocking
-     * Groups log entries by time intervals for timeline visualization
+     * Groups log entries by 30-minute intervals for timeline visualization
      * Now includes TRACE level logs for complete analysis
      */
     const timelineData = [];
@@ -324,16 +325,17 @@ export function LogCharts({ logs }: LogChartsProps) {
       for (const interval of chunk) {
         let intervalStart: Date, intervalEnd: Date;
         
-        if (useHourlyInterval) {
+        if (intervalType === 'hourly') {
           intervalStart = startOfHour(interval);
           intervalEnd = endOfHour(interval);
         } else {
-          intervalStart = startOfMinute(interval);
-          intervalEnd = endOfMinute(interval);
+          // 30-minute intervals
+          intervalStart = new Date(interval);
+          intervalEnd = addMinutes(interval, 30);
         }
         
         const logsInInterval = validLogs.filter(log => 
-          log.timestamp! >= intervalStart && log.timestamp! <= intervalEnd
+          log.timestamp! >= intervalStart && log.timestamp! < intervalEnd
         );
 
         timelineData.push({
@@ -343,7 +345,7 @@ export function LogCharts({ logs }: LogChartsProps) {
           warnings: logsInInterval.filter(log => log.level === 'WARN').length,
           info: logsInInterval.filter(log => log.level === 'INFO').length,
           debug: logsInInterval.filter(log => log.level === 'DEBUG').length,
-          trace: logsInInterval.filter(log => log.level === 'TRACE').length, // Added TRACE support
+          trace: logsInInterval.filter(log => log.level === 'TRACE').length,
         });
       }
       
@@ -358,7 +360,7 @@ export function LogCharts({ logs }: LogChartsProps) {
       levelCounts,
       timelineData,
       timeRange,
-      useHourlyInterval
+      intervalType
     };
   };
 
@@ -369,7 +371,7 @@ export function LogCharts({ logs }: LogChartsProps) {
   /**
    * Memoized chart data objects to prevent unnecessary re-renders
    * Only recalculates when processed chart data changes
-   * Now includes TRACE level in all chart configurations
+   * Now includes TRACE level in all chart configurations with grouped bars
    */
   const { levelData, timelineChartData, chartOptions, barChartOptions, doughnutOptions } = useMemo(() => {
     if (!chartData) {
@@ -382,7 +384,7 @@ export function LogCharts({ logs }: LogChartsProps) {
       };
     }
 
-    const { levelCounts, timelineData, useHourlyInterval } = chartData;
+    const { levelCounts, timelineData, intervalType } = chartData;
 
     // ========================================================================
     // LEVEL DISTRIBUTION CHART DATA (INCLUDING TRACE)
@@ -413,14 +415,15 @@ export function LogCharts({ logs }: LogChartsProps) {
     };
 
     // ========================================================================
-    // TIMELINE CHART DATA (STACKED BAR CHART WITH TRACE)
+    // TIMELINE CHART DATA (GROUPED BAR CHART WITH TRACE)
     // ========================================================================
     
-    const formatString = 'HH:mm';
+    const formatString = intervalType === 'hourly' ? 'HH:mm' : 'HH:mm';
     
     /**
      * Enhanced timeline chart with all log levels including TRACE
-     * Uses stacked bar chart for better visual separation and clarity
+     * Uses grouped bar chart for better visual separation and clarity
+     * Each log level gets its own bar, displayed side by side
      */
     const timelineChartData = {
       labels: timelineData.map(d => format(d.time, formatString)),
@@ -431,7 +434,8 @@ export function LogCharts({ logs }: LogChartsProps) {
           backgroundColor: levelColors.ERROR,
           borderColor: levelColors.ERROR,
           borderWidth: 1,
-          borderSkipped: false, // Show borders on all sides for better separation
+          borderRadius: 2,
+          borderSkipped: false,
         },
         {
           label: 'Warnings',
@@ -439,6 +443,7 @@ export function LogCharts({ logs }: LogChartsProps) {
           backgroundColor: levelColors.WARN,
           borderColor: levelColors.WARN,
           borderWidth: 1,
+          borderRadius: 2,
           borderSkipped: false,
         },
         {
@@ -447,6 +452,7 @@ export function LogCharts({ logs }: LogChartsProps) {
           backgroundColor: levelColors.INFO,
           borderColor: levelColors.INFO,
           borderWidth: 1,
+          borderRadius: 2,
           borderSkipped: false,
         },
         {
@@ -455,6 +461,7 @@ export function LogCharts({ logs }: LogChartsProps) {
           backgroundColor: levelColors.DEBUG,
           borderColor: levelColors.DEBUG,
           borderWidth: 1,
+          borderRadius: 2,
           borderSkipped: false,
         },
         {
@@ -463,6 +470,7 @@ export function LogCharts({ logs }: LogChartsProps) {
           backgroundColor: levelColors.TRACE,
           borderColor: levelColors.TRACE,
           borderWidth: 1,
+          borderRadius: 2,
           borderSkipped: false,
         },
       ],
@@ -511,7 +519,7 @@ export function LogCharts({ logs }: LogChartsProps) {
         x: {
           title: {
             display: true,
-            text: `Time (${useHourlyInterval ? 'Hourly' : 'Per Minute'})`,
+            text: `Time (${intervalType === 'hourly' ? 'Hourly' : '30-minute intervals'})`,
             color: document.documentElement.classList.contains('dark') ? '#9ca3af' : '#6b7280',
           },
           ticks: {
@@ -521,7 +529,7 @@ export function LogCharts({ logs }: LogChartsProps) {
           grid: {
             color: document.documentElement.classList.contains('dark') ? '#374151' : '#e5e7eb',
           },
-          stacked: true, // Enable stacking for x-axis
+          // Remove stacking for grouped bars
         },
         y: {
           beginAtZero: true,
@@ -537,13 +545,14 @@ export function LogCharts({ logs }: LogChartsProps) {
           grid: {
             color: document.documentElement.classList.contains('dark') ? '#374151' : '#e5e7eb',
           },
-          stacked: true, // Enable stacking for y-axis
+          // Remove stacking for grouped bars
         },
       },
     };
 
     /**
-     * Enhanced bar chart options with improved stacking and visual clarity
+     * Enhanced bar chart options for grouped bars (side by side)
+     * Removes stacking to show log levels as separate bars
      */
     const barChartOptions = {
       ...chartOptions,
@@ -575,14 +584,14 @@ export function LogCharts({ logs }: LogChartsProps) {
           ...chartOptions.scales.y,
           title: {
             display: true,
-            text: 'Log Count by Level (Stacked)',
+            text: 'Log Count by Level (Grouped)',
             color: document.documentElement.classList.contains('dark') ? '#9ca3af' : '#6b7280',
           },
-          stacked: true,
+          // No stacking - bars will be grouped side by side
         },
         x: {
           ...chartOptions.scales.x,
-          stacked: true,
+          // No stacking - bars will be grouped side by side
         },
       },
     };
@@ -711,7 +720,7 @@ export function LogCharts({ logs }: LogChartsProps) {
   // MAIN CHARTS RENDER
   // ============================================================================
   
-  const { validLogs, levelCounts, timelineData, timeRange, useHourlyInterval } = chartData;
+  const { validLogs, levelCounts, timelineData, timeRange, intervalType } = chartData;
 
   return (
     <div className="space-y-6">
@@ -816,11 +825,11 @@ export function LogCharts({ logs }: LogChartsProps) {
       </div>
 
       {/* ======================================================================
-          ENHANCED LOG LEVELS TIMELINE (STACKED BAR CHART WITH TRACE)
+          ENHANCED LOG LEVELS TIMELINE (GROUPED BAR CHART WITH TRACE)
           ====================================================================== */}
       <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 transition-colors duration-200">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-          Log Levels Timeline - Stacked Bar Chart ({useHourlyInterval ? 'Hourly' : 'Per Minute'})
+          Log Levels Timeline - Grouped Bar Chart ({intervalType === 'hourly' ? 'Hourly' : '30-minute intervals'})
           {timelineData.length > MAX_TIMELINE_POINTS && (
             <span className="text-sm font-normal text-gray-500 dark:text-gray-400 ml-2">
               (Optimized for performance)
@@ -828,7 +837,7 @@ export function LogCharts({ logs }: LogChartsProps) {
           )}
         </h3>
         <div className="mb-3 text-sm text-gray-600 dark:text-gray-300">
-          Each bar shows the distribution of log levels at that time point. Colors stack to show total volume and composition.
+          Each time period shows log levels as separate bars side by side for clear comparison of activity patterns.
         </div>
         <div className="h-80">
           {timelineChartData && <Bar data={timelineChartData} options={barChartOptions} />}
