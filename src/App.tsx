@@ -65,6 +65,11 @@ function App() {
   const [appMode, setAppMode] = useState<AppMode>('logs');
   
   /**
+   * Transition state for smooth mode switching
+   */
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  
+  /**
    * Knowledge base visibility state
    * Controls whether the developer documentation is shown
    */
@@ -136,14 +141,19 @@ function App() {
   };
 
   // ============================================================================
-  // MODE SWITCHING
+  // SMOOTH MODE SWITCHING
   // ============================================================================
   
   /**
-   * Handle switching between log analysis and audit trail modes
+   * Handle switching between log analysis and audit trail modes with smooth transition
    */
-  const handleModeSwitch = (newMode: AppMode) => {
-    if (newMode === appMode) return; // No change needed
+  const handleModeSwitch = async (newMode: AppMode) => {
+    if (newMode === appMode || isTransitioning) return; // No change needed or already transitioning
+    
+    setIsTransitioning(true);
+    
+    // Small delay for visual feedback
+    await new Promise(resolve => setTimeout(resolve, 150));
     
     // Switch mode and reset all data
     setAppMode(newMode);
@@ -154,6 +164,10 @@ function App() {
     setFilename('');
     setActiveTab('summary');
     setAddedReportContent([]);
+    
+    // Complete transition
+    await new Promise(resolve => setTimeout(resolve, 150));
+    setIsTransitioning(false);
   };
 
   // ============================================================================
@@ -327,7 +341,9 @@ function App() {
                   appMode === 'logs' 
                     ? 'from-blue-600 via-purple-600 to-indigo-700' 
                     : 'from-green-600 via-teal-600 to-blue-700'
-                } p-3 rounded-xl shadow-lg transition-all duration-300`}>
+                } p-3 rounded-xl shadow-lg transition-all duration-500 ${
+                  isTransitioning ? 'scale-95 opacity-70' : 'scale-100 opacity-100'
+                }`}>
                   {appMode === 'logs' ? (
                     <Activity className="h-7 w-7 text-white" />
                   ) : (
@@ -337,7 +353,9 @@ function App() {
                   <div className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></div>
                 </div>
               </div>
-              <div>
+              <div className={`transition-all duration-300 ${
+                isTransitioning ? 'opacity-70 transform translate-x-2' : 'opacity-100 transform translate-x-0'
+              }`}>
                 <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
                   {appMode === 'logs' ? 'Log Analysis Tool' : 'Audit Trail Investigator'}
                 </h1>
@@ -353,30 +371,43 @@ function App() {
             {/* Header action buttons */}
             <div className="flex items-center space-x-4">
               
-              {/* Simple Mode Toggle Switch */}
-              <div className="flex items-center bg-gray-100 dark:bg-gray-700 rounded-lg p-1 transition-colors duration-200">
-                <button
-                  onClick={() => handleModeSwitch('logs')}
-                  className={`flex items-center space-x-2 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 ${
-                    appMode === 'logs'
-                      ? 'bg-blue-600 text-white shadow-sm'
-                      : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
-                  }`}
-                >
-                  <Activity className="h-4 w-4" />
-                  <span>Log Analysis</span>
-                </button>
-                <button
-                  onClick={() => handleModeSwitch('audit')}
-                  className={`flex items-center space-x-2 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 ${
-                    appMode === 'audit'
-                      ? 'bg-green-600 text-white shadow-sm'
-                      : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
-                  }`}
-                >
-                  <FileSpreadsheet className="h-4 w-4" />
-                  <span>Audit Trail</span>
-                </button>
+              {/* Enhanced Mode Toggle Switch with Smooth Transition */}
+              <div className="relative bg-gray-100 dark:bg-gray-700 rounded-xl p-1.5 transition-all duration-300 shadow-inner">
+                {/* Background slider */}
+                <div className={`absolute top-1.5 w-32 h-10 bg-gradient-to-r ${
+                  appMode === 'logs' 
+                    ? 'from-blue-600 to-indigo-600' 
+                    : 'from-green-600 to-teal-600'
+                } rounded-lg shadow-lg transition-all duration-500 ease-in-out transform ${
+                  appMode === 'logs' ? 'translate-x-0' : 'translate-x-32'
+                } ${isTransitioning ? 'scale-95' : 'scale-100'}`}></div>
+                
+                <div className="relative flex">
+                  <button
+                    onClick={() => handleModeSwitch('logs')}
+                    disabled={isTransitioning}
+                    className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 w-32 justify-center ${
+                      appMode === 'logs'
+                        ? 'text-white shadow-sm z-10'
+                        : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
+                    } ${isTransitioning ? 'opacity-70' : 'opacity-100'}`}
+                  >
+                    <Activity className="h-4 w-4" />
+                    <span>Log Analysis</span>
+                  </button>
+                  <button
+                    onClick={() => handleModeSwitch('audit')}
+                    disabled={isTransitioning}
+                    className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 w-32 justify-center ${
+                      appMode === 'audit'
+                        ? 'text-white shadow-sm z-10'
+                        : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
+                    } ${isTransitioning ? 'opacity-70' : 'opacity-100'}`}
+                  >
+                    <FileSpreadsheet className="h-4 w-4" />
+                    <span>Audit Trail</span>
+                  </button>
+                </div>
               </div>
               
               {/* Knowledge Base access button */}
@@ -407,7 +438,9 @@ function App() {
           
           {/* File information display */}
           {filename && (
-            <div className="mt-4 flex items-center text-sm text-gray-600 dark:text-gray-300">
+            <div className={`mt-4 flex items-center text-sm text-gray-600 dark:text-gray-300 transition-all duration-300 ${
+              isTransitioning ? 'opacity-50 transform translate-y-1' : 'opacity-100 transform translate-y-0'
+            }`}>
               {appMode === 'logs' ? (
                 <FileText className="h-4 w-4 mr-2" />
               ) : (
@@ -425,13 +458,32 @@ function App() {
       </div>
 
       {/* ========================================================================
-          MAIN CONTENT AREA
+          MAIN CONTENT AREA WITH TRANSITION OVERLAY
           ======================================================================== */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 relative">
+        
+        {/* Transition Overlay */}
+        {isTransitioning && (
+          <div className="absolute inset-0 bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm z-50 flex items-center justify-center rounded-lg">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 flex items-center space-x-4">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 dark:border-blue-400"></div>
+              <div>
+                <p className="text-lg font-medium text-gray-900 dark:text-white">
+                  Switching to {appMode === 'logs' ? 'Log Analysis' : 'Audit Trail'} mode...
+                </p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  Preparing the interface for your analysis
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
         
         {/* Show file upload when no data is loaded */}
         {!hasData ? (
-          <div className="flex items-center justify-center min-h-96">
+          <div className={`flex items-center justify-center min-h-96 transition-all duration-500 ${
+            isTransitioning ? 'opacity-30 scale-95' : 'opacity-100 scale-100'
+          }`}>
             {appMode === 'logs' ? (
               <FileUpload onFileUpload={handleLogFileUpload} />
             ) : (
@@ -439,7 +491,9 @@ function App() {
             )}
           </div>
         ) : (
-          <div className="space-y-6">
+          <div className={`space-y-6 transition-all duration-500 ${
+            isTransitioning ? 'opacity-30 scale-95' : 'opacity-100 scale-100'
+          }`}>
             
             {/* ================================================================
                 TAB NAVIGATION
@@ -542,7 +596,9 @@ function App() {
         {/* ====================================================================
             PRIVACY AND SECURITY DISCLAIMERS
             ==================================================================== */}
-        <div className="space-y-4 mt-8">
+        <div className={`space-y-4 mt-8 transition-all duration-500 ${
+          isTransitioning ? 'opacity-30' : 'opacity-100'
+        }`}>
           
           {/* Privacy Protection Notice */}
           <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4 transition-colors duration-200">
