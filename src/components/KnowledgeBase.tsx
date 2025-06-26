@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, ArrowLeft, Sun, Moon, FileText, HelpCircle, Settings, Clock, Code, Globe, Zap, Shield } from 'lucide-react';
+import { X, ArrowLeft, Sun, Moon, FileText, HelpCircle, Settings, Clock, Code, Globe, Zap, Shield, FileSpreadsheet, Search, Activity } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 
 interface KnowledgeBaseProps {
@@ -37,7 +37,7 @@ export function KnowledgeBase({ onClose }: KnowledgeBaseProps) {
                   Developer Documentation
                 </h1>
                 <p className="text-sm text-gray-600 dark:text-gray-300">
-                  Complete technical reference for the Log Analysis Tool
+                  Complete technical reference for Log Analysis & Audit Trail Tools
                 </p>
               </div>
             </div>
@@ -100,64 +100,107 @@ export function KnowledgeBase({ onClose }: KnowledgeBaseProps) {
                 </div>
                 <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Quick Start Guide</h2>
                 <p className="text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
-                  Get up and running with the Log Analysis Tool in minutes. This guide covers everything from file upload to report generation.
+                  Get up and running with both Log Analysis and Audit Trail Investigation tools. 
+                  This guide covers everything from file upload to report generation.
                 </p>
               </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                {/* Step 1 */}
+              {/* Tool Selection */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
                 <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl p-6 border border-blue-200 dark:border-blue-800">
                   <div className="flex items-center mb-4">
-                    <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold mr-3">1</div>
-                    <h3 className="text-xl font-semibold text-gray-900 dark:text-white">File Upload</h3>
+                    <div className="w-12 h-12 bg-blue-600 text-white rounded-full flex items-center justify-center mr-4">
+                      <Activity className="h-6 w-6" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Log Analysis Tool</h3>
+                      <p className="text-blue-800 dark:text-blue-300 text-sm">System log file analysis and visualization</p>
+                    </div>
                   </div>
                   <ul className="text-blue-800 dark:text-blue-300 space-y-2 text-sm">
-                    <li>• Drag & drop or click to select log files</li>
-                    <li>• Supports .log, .txt, .out, .json formats</li>
-                    <li>• Maximum file size: 50MB</li>
-                    <li>• Automatic format detection</li>
+                    <li>• Upload .log, .txt, .out, .json files (up to 50MB)</li>
+                    <li>• Automatic timestamp and log level detection</li>
+                    <li>• Interactive charts and visualizations</li>
+                    <li>• PDF report generation with AI insights</li>
+                    <li>• Error pattern analysis and recommendations</li>
+                  </ul>
+                </div>
+
+                <div className="bg-gradient-to-br from-green-50 to-teal-50 dark:from-green-900/20 dark:to-teal-900/20 rounded-xl p-6 border border-green-200 dark:border-green-800">
+                  <div className="flex items-center mb-4">
+                    <div className="w-12 h-12 bg-green-600 text-white rounded-full flex items-center justify-center mr-4">
+                      <FileSpreadsheet className="h-6 w-6" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Audit Trail Investigator</h3>
+                      <p className="text-green-800 dark:text-green-300 text-sm">ProjectWise audit trail analysis for security</p>
+                    </div>
+                  </div>
+                  <ul className="text-green-800 dark:text-green-300 space-y-2 text-sm">
+                    <li>• Upload ProjectWise audit trail CSV files</li>
+                    <li>• Categorized event analysis (deletions, movements, etc.)</li>
+                    <li>• User activity tracking and investigation</li>
+                    <li>• Missing file detection and security analysis</li>
+                    <li>• Export filtered results for further investigation</li>
+                  </ul>
+                </div>
+              </div>
+
+              {/* Common Workflow Steps */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                {/* Step 1 */}
+                <div className="bg-gradient-to-br from-purple-50 to-violet-50 dark:from-purple-900/20 dark:to-violet-900/20 rounded-xl p-6 border border-purple-200 dark:border-purple-800">
+                  <div className="flex items-center mb-4">
+                    <div className="w-8 h-8 bg-purple-600 text-white rounded-full flex items-center justify-center font-bold mr-3">1</div>
+                    <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Choose Your Tool</h3>
+                  </div>
+                  <ul className="text-purple-800 dark:text-purple-300 space-y-2 text-sm">
+                    <li>• Use the toggle switch in the header to select mode</li>
+                    <li>• <strong>Log Analysis:</strong> For system logs, error analysis, performance monitoring</li>
+                    <li>• <strong>Audit Trail:</strong> For ProjectWise security investigations, missing files</li>
+                    <li>• Switch between modes anytime (data will be cleared)</li>
                   </ul>
                 </div>
 
                 {/* Step 2 */}
-                <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-xl p-6 border border-green-200 dark:border-green-800">
+                <div className="bg-gradient-to-br from-orange-50 to-red-50 dark:from-orange-900/20 dark:to-red-900/20 rounded-xl p-6 border border-orange-200 dark:border-orange-800">
                   <div className="flex items-center mb-4">
-                    <div className="w-8 h-8 bg-green-600 text-white rounded-full flex items-center justify-center font-bold mr-3">2</div>
-                    <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Analysis Review</h3>
+                    <div className="w-8 h-8 bg-orange-600 text-white rounded-full flex items-center justify-center font-bold mr-3">2</div>
+                    <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Upload & Analyze</h3>
                   </div>
-                  <ul className="text-green-800 dark:text-green-300 space-y-2 text-sm">
-                    <li>• Comprehensive summary statistics</li>
-                    <li>• Error/Warning/Info breakdown</li>
-                    <li>• Critical issue identification</li>
-                    <li>• Time range analysis</li>
+                  <ul className="text-orange-800 dark:text-orange-300 space-y-2 text-sm">
+                    <li>• Drag & drop files or click to browse</li>
+                    <li>• Automatic format detection and parsing</li>
+                    <li>• Real-time processing with progress feedback</li>
+                    <li>• Immediate summary statistics and insights</li>
                   </ul>
                 </div>
 
                 {/* Step 3 */}
-                <div className="bg-gradient-to-br from-purple-50 to-violet-50 dark:from-purple-900/20 dark:to-violet-900/20 rounded-xl p-6 border border-purple-200 dark:border-purple-800">
+                <div className="bg-gradient-to-br from-teal-50 to-cyan-50 dark:from-teal-900/20 dark:to-cyan-900/20 rounded-xl p-6 border border-teal-200 dark:border-teal-800">
                   <div className="flex items-center mb-4">
-                    <div className="w-8 h-8 bg-purple-600 text-white rounded-full flex items-center justify-center font-bold mr-3">3</div>
-                    <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Data Visualization</h3>
+                    <div className="w-8 h-8 bg-teal-600 text-white rounded-full flex items-center justify-center font-bold mr-3">3</div>
+                    <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Explore Results</h3>
                   </div>
-                  <ul className="text-purple-800 dark:text-purple-300 space-y-2 text-sm">
-                    <li>• Interactive charts and graphs</li>
-                    <li>• Timeline analysis</li>
-                    <li>• Log level distribution</li>
-                    <li>• Error pattern visualization</li>
+                  <ul className="text-teal-800 dark:text-teal-300 space-y-2 text-sm">
+                    <li>• Navigate between Summary, Charts/Categories, and Tables</li>
+                    <li>• Use search and filtering to find specific events</li>
+                    <li>• Export data to CSV for external analysis</li>
+                    <li>• Identify patterns and critical issues</li>
                   </ul>
                 </div>
 
                 {/* Step 4 */}
-                <div className="bg-gradient-to-br from-orange-50 to-red-50 dark:from-orange-900/20 dark:to-red-900/20 rounded-xl p-6 border border-orange-200 dark:border-orange-800">
+                <div className="bg-gradient-to-br from-pink-50 to-rose-50 dark:from-pink-900/20 dark:to-rose-900/20 rounded-xl p-6 border border-pink-200 dark:border-pink-800">
                   <div className="flex items-center mb-4">
-                    <div className="w-8 h-8 bg-orange-600 text-white rounded-full flex items-center justify-center font-bold mr-3">4</div>
-                    <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Report Generation</h3>
+                    <div className="w-8 h-8 bg-pink-600 text-white rounded-full flex items-center justify-center font-bold mr-3">4</div>
+                    <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Generate Reports</h3>
                   </div>
-                  <ul className="text-orange-800 dark:text-orange-300 space-y-2 text-sm">
-                    <li>• Professional PDF reports</li>
-                    <li>• Executive summaries</li>
-                    <li>• Actionable recommendations</li>
-                    <li>• Custom case numbering</li>
+                  <ul className="text-pink-800 dark:text-pink-300 space-y-2 text-sm">
+                    <li>• <strong>Log Analysis:</strong> Professional PDF reports with charts and AI insights</li>
+                    <li>• <strong>Audit Trail:</strong> Export categorized events for investigation</li>
+                    <li>• Custom case numbering and report naming</li>
+                    <li>• Actionable recommendations and next steps</li>
                   </ul>
                 </div>
               </div>
@@ -170,15 +213,31 @@ export function KnowledgeBase({ onClose }: KnowledgeBaseProps) {
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <h4 className="font-medium text-indigo-900 dark:text-indigo-300 mb-2">AI Assistant Integration</h4>
+                    <h4 className="font-medium text-indigo-900 dark:text-indigo-300 mb-2">Log Analysis AI Assistant</h4>
                     <p className="text-sm text-indigo-800 dark:text-indigo-400">
-                      Generate custom analysis sections and insights for enhanced reporting capabilities.
+                      Generate custom analysis sections and insights for enhanced reporting capabilities. 
+                      Ask for specific analysis patterns or recommendations.
                     </p>
                   </div>
                   <div>
-                    <h4 className="font-medium text-indigo-900 dark:text-indigo-300 mb-2">Data Export Options</h4>
+                    <h4 className="font-medium text-indigo-900 dark:text-indigo-300 mb-2">Audit Trail Categorization</h4>
                     <p className="text-sm text-indigo-800 dark:text-indigo-400">
-                      Export filtered log data to CSV format for further analysis in external tools.
+                      Automatic categorization of audit events into investigation categories: 
+                      deletions, movements, check-in/out, replacements, and other activities.
+                    </p>
+                  </div>
+                  <div>
+                    <h4 className="font-medium text-indigo-900 dark:text-indigo-300 mb-2">Security & Privacy</h4>
+                    <p className="text-sm text-indigo-800 dark:text-indigo-400">
+                      All processing happens locally in your browser. No data is transmitted to external servers. 
+                      Only metadata is optionally saved for session tracking.
+                    </p>
+                  </div>
+                  <div>
+                    <h4 className="font-medium text-indigo-900 dark:text-indigo-300 mb-2">Export & Integration</h4>
+                    <p className="text-sm text-indigo-800 dark:text-indigo-400">
+                      Export filtered data to CSV format for further analysis in external tools. 
+                      Generate professional PDF reports for documentation and sharing.
                     </p>
                   </div>
                 </div>
@@ -194,59 +253,35 @@ export function KnowledgeBase({ onClose }: KnowledgeBaseProps) {
                 </div>
                 <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Troubleshooting Guide</h2>
                 <p className="text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
-                  Common issues and solutions for developers and technical support teams.
+                  Common issues and solutions for both Log Analysis and Audit Trail Investigation tools.
                 </p>
               </div>
 
               <div className="space-y-6">
-                {/* File Upload Issues */}
-                <div className="bg-red-50 dark:bg-red-900/20 rounded-xl p-6 border border-red-200 dark:border-red-800">
-                  <h3 className="text-xl font-semibold text-red-900 dark:text-red-300 mb-4 flex items-center">
-                    <div className="w-6 h-6 bg-red-600 text-white rounded-full flex items-center justify-center text-sm font-bold mr-3">!</div>
-                    File Upload Issues
+                {/* Log Analysis Issues */}
+                <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-6 border border-blue-200 dark:border-blue-800">
+                  <h3 className="text-xl font-semibold text-blue-900 dark:text-blue-300 mb-4 flex items-center">
+                    <Activity className="h-6 w-6 mr-3 text-blue-600" />
+                    Log Analysis Tool Issues
                   </h3>
                   
                   <div className="space-y-4">
-                    <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-red-200 dark:border-red-700">
-                      <h4 className="font-semibold text-red-900 dark:text-red-300 mb-2">File Size Limit Exceeded</h4>
-                      <div className="text-red-800 dark:text-red-400 text-sm space-y-2">
-                        <p><strong>Error:</strong> "File size must be less than 50MB"</p>
+                    <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-blue-200 dark:border-blue-700">
+                      <h4 className="font-semibold text-blue-900 dark:text-blue-300 mb-2">File Upload Problems</h4>
+                      <div className="text-blue-800 dark:text-blue-400 text-sm space-y-2">
+                        <p><strong>Issue:</strong> "File size must be less than 50MB"</p>
                         <p><strong>Solutions:</strong></p>
                         <ul className="ml-4 space-y-1">
                           <li>• Use `split -l 10000 logfile.log` to create smaller chunks</li>
-                          <li>• Extract specific time ranges: `grep "2025-01-" logfile.log &gt; filtered.log`</li>
-                          <li>• Compress repetitive content before upload</li>
+                          <li>• Extract specific time ranges: `grep "2025-01-" logfile.log > filtered.log`</li>
                           <li>• Focus on error-heavy time periods for analysis</li>
                         </ul>
                       </div>
                     </div>
 
-                    <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-red-200 dark:border-red-700">
-                      <h4 className="font-semibold text-red-900 dark:text-red-300 mb-2">Unsupported File Format</h4>
-                      <div className="text-red-800 dark:text-red-400 text-sm space-y-2">
-                        <p><strong>Error:</strong> "Please upload a text, log, or JSON file"</p>
-                        <p><strong>Solutions:</strong></p>
-                        <ul className="ml-4 space-y-1">
-                          <li>• Convert binary logs to text format first</li>
-                          <li>• Rename files with proper extensions (.log, .txt, .out, .json)</li>
-                          <li>• Ensure file is not corrupted or encrypted</li>
-                        </ul>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Parsing Issues */}
-                <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-xl p-6 border border-yellow-200 dark:border-yellow-800">
-                  <h3 className="text-xl font-semibold text-yellow-900 dark:text-yellow-300 mb-4 flex items-center">
-                    <div className="w-6 h-6 bg-yellow-600 text-white rounded-full flex items-center justify-center text-sm font-bold mr-3">⚠</div>
-                    Parsing & Analysis Issues
-                  </h3>
-                  
-                  <div className="space-y-4">
-                    <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-yellow-200 dark:border-yellow-700">
-                      <h4 className="font-semibold text-yellow-900 dark:text-yellow-300 mb-2">Timestamp Detection Failed</h4>
-                      <div className="text-yellow-800 dark:text-yellow-400 text-sm space-y-2">
+                    <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-blue-200 dark:border-blue-700">
+                      <h4 className="font-semibold text-blue-900 dark:text-blue-300 mb-2">Timestamp Detection Issues</h4>
+                      <div className="text-blue-800 dark:text-blue-400 text-sm space-y-2">
                         <p><strong>Issue:</strong> Charts show "No valid timestamps found"</p>
                         <p><strong>Supported Formats:</strong></p>
                         <ul className="ml-4 space-y-1">
@@ -256,15 +291,41 @@ export function KnowledgeBase({ onClose }: KnowledgeBaseProps) {
                         </ul>
                       </div>
                     </div>
+                  </div>
+                </div>
 
-                    <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-yellow-200 dark:border-yellow-700">
-                      <h4 className="font-semibold text-yellow-900 dark:text-yellow-300 mb-2">Log Level Misclassification</h4>
-                      <div className="text-yellow-800 dark:text-yellow-400 text-sm space-y-2">
-                        <p><strong>Expected Formats:</strong></p>
+                {/* Audit Trail Issues */}
+                <div className="bg-green-50 dark:bg-green-900/20 rounded-xl p-6 border border-green-200 dark:border-green-800">
+                  <h3 className="text-xl font-semibold text-green-900 dark:text-green-300 mb-4 flex items-center">
+                    <FileSpreadsheet className="h-6 w-6 mr-3 text-green-600" />
+                    Audit Trail Investigator Issues
+                  </h3>
+                  
+                  <div className="space-y-4">
+                    <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-green-200 dark:border-green-700">
+                      <h4 className="font-semibold text-green-900 dark:text-green-300 mb-2">CSV Parsing Problems</h4>
+                      <div className="text-green-800 dark:text-green-400 text-sm space-y-2">
+                        <p><strong>Issue:</strong> "No valid data found" or parsing errors</p>
+                        <p><strong>Solutions:</strong></p>
                         <ul className="ml-4 space-y-1">
-                          <li>• [ERROR] Message content</li>
-                          <li>• ERROR: Message content</li>
-                          <li>• Standalone: ERROR, WARN, INFO, DEBUG, TRACE</li>
+                          <li>• Ensure CSV has proper headers (Object Type, Object Name, Action Name, etc.)</li>
+                          <li>• Check that data is not all in column A (export properly from ProjectWise)</li>
+                          <li>• Verify file encoding is UTF-8</li>
+                          <li>• Remove any special characters or formatting from CSV</li>
+                        </ul>
+                      </div>
+                    </div>
+
+                    <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-green-200 dark:border-green-700">
+                      <h4 className="font-semibold text-green-900 dark:text-green-300 mb-2">Missing Event Categories</h4>
+                      <div className="text-green-800 dark:text-green-400 text-sm space-y-2">
+                        <p><strong>Issue:</strong> Events not categorized correctly</p>
+                        <p><strong>Expected Action Names:</strong></p>
+                        <ul className="ml-4 space-y-1">
+                          <li>• <strong>Deletions:</strong> "Deleted", "Document Deleted", "Purge"</li>
+                          <li>• <strong>Movements:</strong> "Moved", "Exported", "Sent to Folder"</li>
+                          <li>• <strong>Check-in/out:</strong> "Checked Out", "Checked In", "Freed"</li>
+                          <li>• <strong>Replacements:</strong> "Replaced", "Version", "Overwrite"</li>
                         </ul>
                       </div>
                     </div>
@@ -272,25 +333,25 @@ export function KnowledgeBase({ onClose }: KnowledgeBaseProps) {
                 </div>
 
                 {/* Performance Issues */}
-                <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-6 border border-blue-200 dark:border-blue-800">
-                  <h3 className="text-xl font-semibold text-blue-900 dark:text-blue-300 mb-4 flex items-center">
-                    <div className="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-bold mr-3">⚡</div>
+                <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-xl p-6 border border-yellow-200 dark:border-yellow-800">
+                  <h3 className="text-xl font-semibold text-yellow-900 dark:text-yellow-300 mb-4 flex items-center">
+                    <div className="w-6 h-6 bg-yellow-600 text-white rounded-full flex items-center justify-center text-sm font-bold mr-3">⚡</div>
                     Performance Optimization
                   </h3>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-blue-200 dark:border-blue-700">
-                      <h4 className="font-medium text-blue-900 dark:text-blue-300 mb-2">Browser Requirements</h4>
-                      <ul className="text-blue-800 dark:text-blue-400 text-sm space-y-1">
+                    <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-yellow-200 dark:border-yellow-700">
+                      <h4 className="font-medium text-yellow-900 dark:text-yellow-300 mb-2">Browser Requirements</h4>
+                      <ul className="text-yellow-800 dark:text-yellow-400 text-sm space-y-1">
                         <li>• Chrome 120+ (recommended)</li>
                         <li>• Firefox 121+</li>
                         <li>• Safari 17+</li>
                         <li>• Edge 120+</li>
                       </ul>
                     </div>
-                    <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-blue-200 dark:border-blue-700">
-                      <h4 className="font-medium text-blue-900 dark:text-blue-300 mb-2">Memory Management</h4>
-                      <ul className="text-blue-800 dark:text-blue-400 text-sm space-y-1">
+                    <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-yellow-200 dark:border-yellow-700">
+                      <h4 className="font-medium text-yellow-900 dark:text-yellow-300 mb-2">Memory Management</h4>
+                      <ul className="text-yellow-800 dark:text-yellow-400 text-sm space-y-1">
                         <li>• Close unnecessary browser tabs</li>
                         <li>• Process smaller file chunks</li>
                         <li>• Use filtering to focus analysis</li>
@@ -311,7 +372,7 @@ export function KnowledgeBase({ onClose }: KnowledgeBaseProps) {
                 </div>
                 <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Technical Specifications</h2>
                 <p className="text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
-                  Detailed technical requirements and constraints for developers and system administrators.
+                  Detailed technical requirements and constraints for both tools.
                 </p>
               </div>
 
@@ -344,83 +405,41 @@ export function KnowledgeBase({ onClose }: KnowledgeBaseProps) {
                       <p className="text-sm text-gray-600 dark:text-gray-400">Version 121+ (December 2023 or newer)</p>
                       <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">Full compatibility with all features</p>
                     </div>
-                    
-                    <div className="bg-white dark:bg-gray-800 border border-blue-200 dark:border-blue-700 rounded-lg p-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <h5 className="font-medium text-gray-900 dark:text-white">Safari</h5>
-                        <span className="bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 px-2 py-1 rounded-full text-xs font-medium">
-                          Supported
-                        </span>
-                      </div>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">Version 17+ (macOS Sonoma 14.0+)</p>
-                      <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">WebKit-based compatibility</p>
-                    </div>
-                    
-                    <div className="bg-white dark:bg-gray-800 border border-blue-200 dark:border-blue-700 rounded-lg p-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <h5 className="font-medium text-gray-900 dark:text-white">Microsoft Edge</h5>
-                        <span className="bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 px-2 py-1 rounded-full text-xs font-medium">
-                          Supported
-                        </span>
-                      </div>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">Version 120+ (Chromium-based)</p>
-                      <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">Chrome-equivalent performance</p>
-                    </div>
-                  </div>
-                  
-                  <div className="mt-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3">
-                    <p className="text-sm text-red-800 dark:text-red-400">
-                      <strong>Unsupported:</strong> Internet Explorer, legacy browser versions, and mobile browsers with limited JavaScript support.
-                    </p>
                   </div>
                 </div>
 
-                {/* Technical Requirements */}
-                <div className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-xl p-6 border border-green-200 dark:border-green-800">
-                  <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
-                    <Code className="h-5 w-5 mr-2 text-green-600" />
-                    Required Browser APIs
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <h4 className="font-medium text-green-900 dark:text-green-300 mb-2">Core APIs</h4>
-                      <ul className="text-green-800 dark:text-green-400 text-sm space-y-1">
-                        <li>• ES2020+ JavaScript support</li>
-                        <li>• File API & FileReader</li>
-                        <li>• Canvas API for chart rendering</li>
-                        <li>• Web Workers for processing</li>
-                      </ul>
-                    </div>
-                    <div>
-                      <h4 className="font-medium text-green-900 dark:text-green-300 mb-2">CSS Features</h4>
-                      <ul className="text-green-800 dark:text-green-400 text-sm space-y-1">
-                        <li>• CSS Grid & Flexbox</li>
-                        <li>• CSS Custom Properties</li>
-                        <li>• CSS Transforms & Transitions</li>
-                        <li>• Media queries for responsiveness</li>
-                      </ul>
-                    </div>
-                  </div>
-                </div>
-
-                {/* File Processing */}
+                {/* File Processing Limits */}
                 <div className="bg-gradient-to-r from-purple-50 to-violet-50 dark:from-purple-900/20 dark:to-violet-900/20 rounded-xl p-6 border border-purple-200 dark:border-purple-800">
                   <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
                     <FileText className="h-5 w-5 mr-2 text-purple-600" />
-                    File Processing Limits
+                    File Processing Specifications
                   </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="bg-white dark:bg-gray-800 border border-purple-200 dark:border-purple-700 rounded-lg p-4 text-center">
-                      <div className="text-2xl font-bold text-purple-600 dark:text-purple-400 mb-1">50MB</div>
-                      <div className="text-sm text-gray-600 dark:text-gray-400">Maximum file size</div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <h4 className="font-medium text-purple-900 dark:text-purple-300 mb-3">Log Analysis Tool</h4>
+                      <div className="space-y-3">
+                        <div className="bg-white dark:bg-gray-800 border border-purple-200 dark:border-purple-700 rounded-lg p-3">
+                          <div className="text-lg font-bold text-purple-600 dark:text-purple-400">50MB</div>
+                          <div className="text-sm text-gray-600 dark:text-gray-400">Maximum file size</div>
+                        </div>
+                        <div className="bg-white dark:bg-gray-800 border border-purple-200 dark:border-purple-700 rounded-lg p-3">
+                          <div className="text-lg font-bold text-purple-600 dark:text-purple-400">.log, .txt, .out, .json</div>
+                          <div className="text-sm text-gray-600 dark:text-gray-400">Supported formats</div>
+                        </div>
+                      </div>
                     </div>
-                    <div className="bg-white dark:bg-gray-800 border border-purple-200 dark:border-purple-700 rounded-lg p-4 text-center">
-                      <div className="text-2xl font-bold text-purple-600 dark:text-purple-400 mb-1">4</div>
-                      <div className="text-sm text-gray-600 dark:text-gray-400">Supported formats</div>
-                    </div>
-                    <div className="bg-white dark:bg-gray-800 border border-purple-200 dark:border-purple-700 rounded-lg p-4 text-center">
-                      <div className="text-2xl font-bold text-purple-600 dark:text-purple-400 mb-1">UTF-8</div>
-                      <div className="text-sm text-gray-600 dark:text-gray-400">Text encoding</div>
+                    <div>
+                      <h4 className="font-medium text-purple-900 dark:text-purple-300 mb-3">Audit Trail Investigator</h4>
+                      <div className="space-y-3">
+                        <div className="bg-white dark:bg-gray-800 border border-purple-200 dark:border-purple-700 rounded-lg p-3">
+                          <div className="text-lg font-bold text-purple-600 dark:text-purple-400">50MB</div>
+                          <div className="text-sm text-gray-600 dark:text-gray-400">Maximum CSV file size</div>
+                        </div>
+                        <div className="bg-white dark:bg-gray-800 border border-purple-200 dark:border-purple-700 rounded-lg p-3">
+                          <div className="text-lg font-bold text-purple-600 dark:text-purple-400">.csv, .txt</div>
+                          <div className="text-sm text-gray-600 dark:text-gray-400">ProjectWise audit formats</div>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -436,7 +455,7 @@ export function KnowledgeBase({ onClose }: KnowledgeBaseProps) {
                       <h4 className="font-medium text-indigo-900 dark:text-indigo-300 mb-2">Data Processing</h4>
                       <ul className="text-indigo-800 dark:text-indigo-400 text-sm space-y-1">
                         <li>• Client-side processing only</li>
-                        <li>• No log content stored remotely</li>
+                        <li>• No file content stored remotely</li>
                         <li>• Metadata-only database storage</li>
                         <li>• Session-based authentication</li>
                       </ul>
@@ -444,9 +463,9 @@ export function KnowledgeBase({ onClose }: KnowledgeBaseProps) {
                     <div className="bg-white dark:bg-gray-800 border border-indigo-200 dark:border-indigo-700 rounded-lg p-4">
                       <h4 className="font-medium text-indigo-900 dark:text-indigo-300 mb-2">AI Integration</h4>
                       <ul className="text-indigo-800 dark:text-indigo-400 text-sm space-y-1">
-                        <li>• Optional AI assistant feature</li>
-                        <li>• Summary statistics only</li>
-                        <li>• No raw log data transmission</li>
+                        <li>• Log Analysis: Optional AI assistant</li>
+                        <li>• Audit Trail: No AI processing</li>
+                        <li>• Summary statistics only (never raw data)</li>
                         <li>• Google Gemini API integration</li>
                       </ul>
                     </div>
@@ -464,7 +483,7 @@ export function KnowledgeBase({ onClose }: KnowledgeBaseProps) {
                 </div>
                 <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Release History</h2>
                 <p className="text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
-                  Track all updates, improvements, and new features added to the Log Analysis Tool.
+                  Track all updates, improvements, and new features added to both tools.
                 </p>
               </div>
 
@@ -472,7 +491,7 @@ export function KnowledgeBase({ onClose }: KnowledgeBaseProps) {
                 {/* Latest Release */}
                 <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl p-6 border-l-4 border-blue-500">
                   <div className="flex items-center space-x-2 mb-3">
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">June 19, 2025</h3>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">January 15, 2025</h3>
                     <span className="bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 px-3 py-1 rounded-full text-xs font-medium">
                       Latest Release
                     </span>
@@ -481,20 +500,20 @@ export function KnowledgeBase({ onClose }: KnowledgeBaseProps) {
                     <div>
                       <h4 className="font-medium text-gray-900 dark:text-white">🎯 Major Features</h4>
                       <ul className="text-gray-600 dark:text-gray-400 text-sm space-y-1 mt-1 ml-4">
-                        <li>• Comprehensive Developer Documentation with tabbed navigation</li>
-                        <li>• Professional Knowledge Base design for technical teams</li>
-                        <li>• Enhanced troubleshooting guides with code examples</li>
-                        <li>• Detailed browser compatibility matrix</li>
-                        <li>• Technical specifications for system administrators</li>
+                        <li>• <strong>Audit Trail Investigator:</strong> Complete ProjectWise audit trail analysis tool</li>
+                        <li>• Categorized event analysis (deletions, movements, check-in/out, replacements)</li>
+                        <li>• User activity tracking and security investigation features</li>
+                        <li>• CSV export functionality for filtered audit data</li>
+                        <li>• Dual-mode application with smooth mode switching</li>
                       </ul>
                     </div>
                     <div>
                       <h4 className="font-medium text-gray-900 dark:text-white">🔧 Improvements</h4>
                       <ul className="text-gray-600 dark:text-gray-400 text-sm space-y-1 mt-1 ml-4">
-                        <li>• Improved AI chatbot size and readability</li>
-                        <li>• Hidden scrollbars with maintained functionality</li>
-                        <li>• Enhanced visual design with gradient backgrounds</li>
-                        <li>• Better information organization for developers</li>
+                        <li>• Enhanced UI design with cleaner mode toggle</li>
+                        <li>• Improved file parsing for various CSV formats</li>
+                        <li>• Better error handling and user feedback</li>
+                        <li>• Updated knowledge base with audit trail documentation</li>
                       </ul>
                     </div>
                   </div>
@@ -502,45 +521,30 @@ export function KnowledgeBase({ onClose }: KnowledgeBaseProps) {
 
                 {/* Previous Releases */}
                 <div className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-xl p-6 border-l-4 border-green-500">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">June 15, 2025</h3>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">June 19, 2025</h3>
                   <div className="space-y-3">
                     <div>
-                      <h4 className="font-medium text-gray-900 dark:text-white">🤖 AI Integration</h4>
+                      <h4 className="font-medium text-gray-900 dark:text-white">📚 Documentation</h4>
                       <ul className="text-gray-600 dark:text-gray-400 text-sm space-y-1 mt-1 ml-4">
-                        <li>• Google Gemini AI assistant integration</li>
-                        <li>• "Add to Report" functionality for AI content</li>
-                        <li>• Contextual responses based on log statistics</li>
-                        <li>• Chat interface with message history</li>
+                        <li>• Comprehensive Developer Documentation with tabbed navigation</li>
+                        <li>• Professional Knowledge Base design for technical teams</li>
+                        <li>• Enhanced troubleshooting guides with code examples</li>
+                        <li>• Detailed browser compatibility matrix</li>
                       </ul>
                     </div>
                   </div>
                 </div>
 
                 <div className="bg-gradient-to-r from-purple-50 to-violet-50 dark:from-purple-900/20 dark:to-violet-900/20 rounded-xl p-6 border-l-4 border-purple-500">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">June 10, 2025</h3>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">June 15, 2025</h3>
                   <div className="space-y-3">
                     <div>
-                      <h4 className="font-medium text-gray-900 dark:text-white">📈 Visualization Improvements</h4>
+                      <h4 className="font-medium text-gray-900 dark:text-white">🤖 AI Integration</h4>
                       <ul className="text-gray-600 dark:text-gray-400 text-sm space-y-1 mt-1 ml-4">
-                        <li>• Redesigned charts with consistent color schemes</li>
-                        <li>• Enhanced timeline analysis with auto-intervals</li>
-                        <li>• Improved dark mode support for charts</li>
-                        <li>• Comprehensive chart legends and tooltips</li>
-                      </ul>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-gradient-to-r from-yellow-50 to-orange-50 dark:from-yellow-900/20 dark:to-orange-900/20 rounded-xl p-6 border-l-4 border-yellow-500">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">June 5, 2025</h3>
-                  <div className="space-y-3">
-                    <div>
-                      <h4 className="font-medium text-gray-900 dark:text-white">🎨 UI/UX Enhancements</h4>
-                      <ul className="text-gray-600 dark:text-gray-400 text-sm space-y-1 mt-1 ml-4">
-                        <li>• Comprehensive dark mode implementation</li>
-                        <li>• Enhanced visual design with gradients</li>
-                        <li>• Smooth transitions and micro-interactions</li>
-                        <li>• Improved responsive design</li>
+                        <li>• Google Gemini AI assistant integration for log analysis</li>
+                        <li>• "Add to Report" functionality for AI content</li>
+                        <li>• Contextual responses based on log statistics</li>
+                        <li>• Chat interface with message history</li>
                       </ul>
                     </div>
                   </div>

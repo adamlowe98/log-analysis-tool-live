@@ -65,11 +65,6 @@ function App() {
   const [appMode, setAppMode] = useState<AppMode>('logs');
   
   /**
-   * Mode transition state for smooth animations
-   */
-  const [isTransitioning, setIsTransitioning] = useState(false);
-  
-  /**
    * Knowledge base visibility state
    * Controls whether the developer documentation is shown
    */
@@ -141,19 +136,14 @@ function App() {
   };
 
   // ============================================================================
-  // MODE SWITCHING WITH SMOOTH TRANSITIONS
+  // MODE SWITCHING
   // ============================================================================
   
   /**
-   * Handle switching between log analysis and audit trail modes with smooth transitions
+   * Handle switching between log analysis and audit trail modes
    */
-  const handleModeSwitch = async (newMode: AppMode) => {
+  const handleModeSwitch = (newMode: AppMode) => {
     if (newMode === appMode) return; // No change needed
-    
-    setIsTransitioning(true);
-    
-    // Fade out current content
-    await new Promise(resolve => setTimeout(resolve, 150));
     
     // Switch mode and reset all data
     setAppMode(newMode);
@@ -164,10 +154,6 @@ function App() {
     setFilename('');
     setActiveTab('summary');
     setAddedReportContent([]);
-    
-    // Fade in new content
-    await new Promise(resolve => setTimeout(resolve, 150));
-    setIsTransitioning(false);
   };
 
   // ============================================================================
@@ -327,13 +313,13 @@ function App() {
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 transition-colors duration-200">
       
       {/* ========================================================================
-          APPLICATION HEADER WITH SMOOTH TRANSITIONS
+          APPLICATION HEADER
           ======================================================================== */}
-      <div className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700 transition-all duration-300">
+      <div className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700 transition-colors duration-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex items-center justify-between">
             
-            {/* Application branding and title with smooth transitions */}
+            {/* Application branding and title */}
             <div className="flex items-center space-x-3">
               <div className="relative">
                 <div className="absolute inset-0 bg-gradient-to-br from-blue-500 via-purple-600 to-indigo-700 rounded-xl animate-pulse opacity-20"></div>
@@ -341,25 +327,21 @@ function App() {
                   appMode === 'logs' 
                     ? 'from-blue-600 via-purple-600 to-indigo-700' 
                     : 'from-green-600 via-teal-600 to-blue-700'
-                } p-3 rounded-xl shadow-lg transition-all duration-500 ${
-                  isTransitioning ? 'scale-95 opacity-70' : 'scale-100 opacity-100'
-                }`}>
+                } p-3 rounded-xl shadow-lg transition-all duration-300`}>
                   {appMode === 'logs' ? (
-                    <Activity className="h-7 w-7 text-white transition-all duration-300" />
+                    <Activity className="h-7 w-7 text-white" />
                   ) : (
-                    <FileSpreadsheet className="h-7 w-7 text-white transition-all duration-300" />
+                    <FileSpreadsheet className="h-7 w-7 text-white" />
                   )}
                   <div className="absolute top-1 right-1 w-2 h-2 bg-red-400 rounded-full animate-ping"></div>
                   <div className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></div>
                 </div>
               </div>
-              <div className={`transition-all duration-300 ${
-                isTransitioning ? 'opacity-70 transform translate-x-2' : 'opacity-100 transform translate-x-0'
-              }`}>
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-white transition-all duration-300">
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
                   {appMode === 'logs' ? 'Log Analysis Tool' : 'Audit Trail Investigator'}
                 </h1>
-                <p className="text-sm text-gray-600 dark:text-gray-300 transition-all duration-300">
+                <p className="text-sm text-gray-600 dark:text-gray-300">
                   {appMode === 'logs' 
                     ? 'Upload and analyze log files with detailed insights and visualizations'
                     : 'Investigate ProjectWise audit trails for missing files and security events'
@@ -371,43 +353,30 @@ function App() {
             {/* Header action buttons */}
             <div className="flex items-center space-x-4">
               
-              {/* Enhanced Mode Toggle Switch with Better Visual Feedback */}
-              <div className="relative bg-gray-100 dark:bg-gray-700 rounded-xl p-1.5 transition-all duration-300 shadow-inner">
-                {/* Background slider */}
-                <div className={`absolute top-1.5 w-32 h-10 bg-gradient-to-r ${
-                  appMode === 'logs' 
-                    ? 'from-blue-600 to-purple-600' 
-                    : 'from-green-600 to-teal-600'
-                } rounded-lg shadow-lg transition-all duration-500 ease-out ${
-                  appMode === 'logs' ? 'left-1.5' : 'left-36'
-                }`}></div>
-                
-                <div className="relative flex items-center space-x-1">
-                  <button
-                    onClick={() => handleModeSwitch('logs')}
-                    disabled={isTransitioning}
-                    className={`flex items-center space-x-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-300 z-10 w-32 justify-center ${
-                      appMode === 'logs'
-                        ? 'text-white shadow-md'
-                        : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
-                    } ${isTransitioning ? 'opacity-70' : 'opacity-100'}`}
-                  >
-                    <Activity className="h-4 w-4" />
-                    <span>Log Analysis</span>
-                  </button>
-                  <button
-                    onClick={() => handleModeSwitch('audit')}
-                    disabled={isTransitioning}
-                    className={`flex items-center space-x-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-300 z-10 w-32 justify-center ${
-                      appMode === 'audit'
-                        ? 'text-white shadow-md'
-                        : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
-                    } ${isTransitioning ? 'opacity-70' : 'opacity-100'}`}
-                  >
-                    <FileSpreadsheet className="h-4 w-4" />
-                    <span>Audit Trail</span>
-                  </button>
-                </div>
+              {/* Simple Mode Toggle Switch */}
+              <div className="flex items-center bg-gray-100 dark:bg-gray-700 rounded-lg p-1 transition-colors duration-200">
+                <button
+                  onClick={() => handleModeSwitch('logs')}
+                  className={`flex items-center space-x-2 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 ${
+                    appMode === 'logs'
+                      ? 'bg-blue-600 text-white shadow-sm'
+                      : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
+                  }`}
+                >
+                  <Activity className="h-4 w-4" />
+                  <span>Log Analysis</span>
+                </button>
+                <button
+                  onClick={() => handleModeSwitch('audit')}
+                  className={`flex items-center space-x-2 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 ${
+                    appMode === 'audit'
+                      ? 'bg-green-600 text-white shadow-sm'
+                      : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
+                  }`}
+                >
+                  <FileSpreadsheet className="h-4 w-4" />
+                  <span>Audit Trail</span>
+                </button>
               </div>
               
               {/* Knowledge Base access button */}
@@ -436,11 +405,9 @@ function App() {
             </div>
           </div>
           
-          {/* File information display with smooth transitions */}
+          {/* File information display */}
           {filename && (
-            <div className={`mt-4 flex items-center text-sm text-gray-600 dark:text-gray-300 transition-all duration-300 ${
-              isTransitioning ? 'opacity-0 transform translate-y-2' : 'opacity-100 transform translate-y-0'
-            }`}>
+            <div className="mt-4 flex items-center text-sm text-gray-600 dark:text-gray-300">
               {appMode === 'logs' ? (
                 <FileText className="h-4 w-4 mr-2" />
               ) : (
@@ -458,34 +425,26 @@ function App() {
       </div>
 
       {/* ========================================================================
-          MAIN CONTENT AREA WITH SMOOTH TRANSITIONS
+          MAIN CONTENT AREA
           ======================================================================== */}
-      <div className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 transition-all duration-300 ${
-        isTransitioning ? 'opacity-70 transform scale-98' : 'opacity-100 transform scale-100'
-      }`}>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         
         {/* Show file upload when no data is loaded */}
         {!hasData ? (
           <div className="flex items-center justify-center min-h-96">
-            <div className={`transition-all duration-500 ${
-              isTransitioning ? 'opacity-0 transform scale-95' : 'opacity-100 transform scale-100'
-            }`}>
-              {appMode === 'logs' ? (
-                <FileUpload onFileUpload={handleLogFileUpload} />
-              ) : (
-                <AuditFileUpload onFileUpload={handleAuditFileUpload} />
-              )}
-            </div>
+            {appMode === 'logs' ? (
+              <FileUpload onFileUpload={handleLogFileUpload} />
+            ) : (
+              <AuditFileUpload onFileUpload={handleAuditFileUpload} />
+            )}
           </div>
         ) : (
           <div className="space-y-6">
             
             {/* ================================================================
-                TAB NAVIGATION WITH SMOOTH TRANSITIONS
+                TAB NAVIGATION
                 ================================================================ */}
-            <div className={`bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-1 transition-all duration-300 ${
-              isTransitioning ? 'opacity-70' : 'opacity-100'
-            }`}>
+            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-1 transition-colors duration-200">
               <nav className="flex space-x-1">
                 {tabs.map((tab) => {
                   const Icon = tab.icon;
@@ -508,14 +467,14 @@ function App() {
             </div>
 
             {/* ================================================================
-                CONTENT PANELS WITH ENHANCED SMOOTH TRANSITIONS
+                CONTENT PANELS
                 ================================================================ */}
             <div className="relative">
               
               {/* Summary Panel */}
-              <div className={`transition-all duration-500 ease-in-out ${
+              <div className={`transition-all duration-300 ease-in-out ${
                 activeTab === 'summary' ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 absolute inset-0 pointer-events-none'
-              } ${isTransitioning ? 'opacity-50' : ''}`}>
+              }`}>
                 {activeTab === 'summary' && currentSummary && (
                   appMode === 'logs' ? (
                     <LogSummary summary={logSummary!} />
@@ -527,9 +486,9 @@ function App() {
               
               {/* Charts Panel (Log Analysis Only) */}
               {appMode === 'logs' && (
-                <div className={`transition-all duration-500 ease-in-out ${
+                <div className={`transition-all duration-300 ease-in-out ${
                   activeTab === 'charts' ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 absolute inset-0 pointer-events-none'
-                } ${isTransitioning ? 'opacity-50' : ''}`}>
+                }`}>
                   {activeTab === 'charts' && (
                     <LogCharts logs={logs} />
                   )}
@@ -538,9 +497,9 @@ function App() {
               
               {/* Categorized Events Panel (Audit Trail Only) */}
               {appMode === 'audit' && (
-                <div className={`transition-all duration-500 ease-in-out ${
+                <div className={`transition-all duration-300 ease-in-out ${
                   activeTab === 'categorized' ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 absolute inset-0 pointer-events-none'
-                } ${isTransitioning ? 'opacity-50' : ''}`}>
+                }`}>
                   {activeTab === 'categorized' && (
                     <AuditCategorizedTable entries={auditEntries} />
                   )}
@@ -548,9 +507,9 @@ function App() {
               )}
               
               {/* Table Panel */}
-              <div className={`transition-all duration-500 ease-in-out ${
+              <div className={`transition-all duration-300 ease-in-out ${
                 activeTab === 'table' ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 absolute inset-0 pointer-events-none'
-              } ${isTransitioning ? 'opacity-50' : ''}`}>
+              }`}>
                 {activeTab === 'table' && (
                   appMode === 'logs' ? (
                     <LogTable logs={logs} />
@@ -562,9 +521,9 @@ function App() {
 
               {/* Report Panel (Log Analysis Only) */}
               {appMode === 'logs' && (
-                <div className={`transition-all duration-500 ease-in-out ${
+                <div className={`transition-all duration-300 ease-in-out ${
                   activeTab === 'report' ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 absolute inset-0 pointer-events-none'
-                } ${isTransitioning ? 'opacity-50' : ''}`}>
+                }`}>
                   {activeTab === 'report' && logSummary && (
                     <ReportGenerator 
                       logs={logs} 
@@ -581,11 +540,9 @@ function App() {
         )}
 
         {/* ====================================================================
-            PRIVACY AND SECURITY DISCLAIMERS WITH SMOOTH TRANSITIONS
+            PRIVACY AND SECURITY DISCLAIMERS
             ==================================================================== */}
-        <div className={`space-y-4 mt-8 transition-all duration-300 ${
-          isTransitioning ? 'opacity-50' : 'opacity-100'
-        }`}>
+        <div className="space-y-4 mt-8">
           
           {/* Privacy Protection Notice */}
           <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4 transition-colors duration-200">
@@ -639,9 +596,9 @@ function App() {
       </div>
 
       {/* ========================================================================
-          AI ASSISTANT CHATBOT (LOG ANALYSIS ONLY) WITH TRANSITION AWARENESS
+          AI ASSISTANT CHATBOT (LOG ANALYSIS ONLY)
           ======================================================================== */}
-      {appMode === 'logs' && !isTransitioning && (
+      {appMode === 'logs' && (
         <GeminiChatbot 
           logs={logs} 
           summary={logSummary}
