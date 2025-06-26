@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { Search, Download, Clock, User, FileText, FolderOpen, MessageSquare } from 'lucide-react';
 import { AuditEntry } from '../types/audit';
 import { format } from 'date-fns';
@@ -18,6 +18,11 @@ export function AuditTable({ entries }: AuditTableProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(50);
+  
+  // Refs for scroll synchronization
+  const topScrollRef = useRef<HTMLDivElement>(null);
+  const bottomScrollRef = useRef<HTMLDivElement>(null);
+  const tableContainerRef = useRef<HTMLDivElement>(null);
 
   // Filter entries based on search term
   const filteredEntries = useMemo(() => {
@@ -41,6 +46,87 @@ export function AuditTable({ entries }: AuditTableProps) {
   }, [filteredEntries, currentPage, pageSize]);
 
   const totalPages = Math.ceil(filteredEntries.length / pageSize);
+
+  // Synchronize scroll between top and bottom scroll bars
+  useEffect(() => {
+    const topScroll = topScrollRef.current;
+    const bottomScroll = bottomScrollRef.current;
+    const tableContainer = tableContainerRef.current;
+
+    if (!topScroll || !bottomScroll || !tableContainer) return;
+
+    // Set the scroll width for the dummy scroll bars
+    const updateScrollWidth = () => {
+      const scrollWidth = tableContainer.scrollWidth;
+      const clientWidth = tableContainer.clientWidth;
+      
+      if (scrollWidth > clientWidth) {
+        topScroll.style.display = 'block';
+        bottomScroll.style.display = 'block';
+        
+        // Create dummy content to match table width
+        const dummyContent = topScroll.querySelector('.scroll-content') as HTMLDivElement;
+        const dummyContentBottom = bottomScroll.querySelector('.scroll-content') as HTMLDivElement;
+        
+        if (dummyContent && dummyContentBottom) {
+          dummyContent.style.width = `${scrollWidth}px`;
+          dummyContentBottom.style.width = `${scrollWidth}px`;
+        }
+      } else {
+        topScroll.style.display = 'none';
+        bottomScroll.style.display = 'none';
+      }
+    };
+
+    // Sync scroll positions
+    const syncFromTop = () => {
+      if (tableContainer && topScroll) {
+        tableContainer.scrollLeft = topScroll.scrollLeft;
+        if (bottomScroll) {
+          bottomScroll.scrollLeft = topScroll.scrollLeft;
+        }
+      }
+    };
+
+    const syncFromBottom = () => {
+      if (tableContainer && bottomScroll) {
+        tableContainer.scrollLeft = bottomScroll.scrollLeft;
+        if (topScroll) {
+          topScroll.scrollLeft = bottomScroll.scrollLeft;
+        }
+      }
+    };
+
+    const syncFromTable = () => {
+      if (tableContainer) {
+        if (topScroll) {
+          topScroll.scrollLeft = tableContainer.scrollLeft;
+        }
+        if (bottomScroll) {
+          bottomScroll.scrollLeft = tableContainer.scrollLeft;
+        }
+      }
+    };
+
+    // Add event listeners
+    topScroll.addEventListener('scroll', syncFromTop);
+    bottomScroll.addEventListener('scroll', syncFromBottom);
+    tableContainer.addEventListener('scroll', syncFromTable);
+
+    // Initial setup and resize observer
+    updateScrollWidth();
+    
+    const resizeObserver = new ResizeObserver(updateScrollWidth);
+    resizeObserver.observe(tableContainer);
+
+    // Cleanup
+    return () => {
+      topScroll.removeEventListener('scroll', syncFromTop);
+      bottomScroll.removeEventListener('scroll', syncFromBottom);
+      tableContainer.removeEventListener('scroll', syncFromTable);
+      resizeObserver.disconnect();
+    };
+  }, [paginatedEntries]); // Re-run when table content changes
 
   const formatTimestamp = (timestamp: Date | null) => {
     if (!timestamp || isNaN(timestamp.getTime())) {
@@ -132,27 +218,39 @@ export function AuditTable({ entries }: AuditTableProps) {
         </div>
       </div>
 
+      {/* Top Scroll Bar */}
+      <div 
+        ref={topScrollRef}
+        className="overflow-x-auto overflow-y-hidden h-4 bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600 transition-colors duration-200"
+        style={{ display: 'none' }}
+      >
+        <div className="scroll-content h-1"></div>
+      </div>
+
       {/* Table */}
-      <div className="overflow-x-auto">
+      <div 
+        ref={tableContainerRef}
+        className="overflow-x-auto"
+      >
         <table className="w-full">
           <thead className="bg-gray-50 dark:bg-gray-700 transition-colors duration-200">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider whitespace-nowrap">
                 Date/Time
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider whitespace-nowrap">
                 Action Name
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider whitespace-nowrap">
                 User Name
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider whitespace-nowrap">
                 Object Name
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider whitespace-nowrap">
                 Path
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider whitespace-nowrap">
                 Additional Data
               </th>
             </tr>
@@ -179,9 +277,9 @@ export function AuditTable({ entries }: AuditTableProps) {
                   </div>
                 </td>
                 <td className="px-6 py-4 text-sm text-gray-900 dark:text-gray-100">
-                  <div className="max-w-xs">
+                  <div className="min-w-0 max-w-xs">
                     {entry.document ? (
-                      <span className="font-mono text-xs bg-gray-100 dark:bg-gray-600 px-2 py-1 rounded">
+                      <span className="font-mono text-xs bg-gray-100 dark:bg-gray-600 px-2 py-1 rounded block truncate" title={entry.document}>
                         {entry.document}
                       </span>
                     ) : (
@@ -190,7 +288,7 @@ export function AuditTable({ entries }: AuditTableProps) {
                   </div>
                 </td>
                 <td className="px-6 py-4 text-sm text-gray-900 dark:text-gray-100">
-                  <div className="flex items-center space-x-2 max-w-xs">
+                  <div className="flex items-center space-x-2 min-w-0 max-w-xs">
                     {entry.folder ? (
                       <>
                         <FolderOpen className="h-4 w-4 text-yellow-500 dark:text-yellow-400 flex-shrink-0" />
@@ -204,7 +302,7 @@ export function AuditTable({ entries }: AuditTableProps) {
                   </div>
                 </td>
                 <td className="px-6 py-4 text-sm text-gray-900 dark:text-gray-100">
-                  <div className="max-w-xs">
+                  <div className="min-w-0 max-w-xs">
                     {entry.details ? (
                       <div className="flex items-start space-x-2">
                         <MessageSquare className="h-4 w-4 text-purple-500 dark:text-purple-400 flex-shrink-0 mt-0.5" />
@@ -221,6 +319,15 @@ export function AuditTable({ entries }: AuditTableProps) {
             ))}
           </tbody>
         </table>
+      </div>
+
+      {/* Bottom Scroll Bar */}
+      <div 
+        ref={bottomScrollRef}
+        className="overflow-x-auto overflow-y-hidden h-4 bg-gray-50 dark:bg-gray-700 border-t border-gray-200 dark:border-gray-600 transition-colors duration-200"
+        style={{ display: 'none' }}
+      >
+        <div className="scroll-content h-1"></div>
       </div>
 
       {/* Pagination */}
