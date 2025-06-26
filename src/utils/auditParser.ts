@@ -8,6 +8,7 @@ import { AuditEntry, AuditSummary, AuditCategory, CategorizedAuditEntries } from
  * 
  * Key Features:
  * - CSV parsing with flexible column mapping
+ * - Handles single-column data (all data in column A)
  * - Action categorization for investigation
  * - Key event identification
  * - Statistical analysis and summary generation
@@ -20,8 +21,7 @@ import { AuditEntry, AuditSummary, AuditCategory, CategorizedAuditEntries } from
  * Main audit trail CSV parsing function
  * 
  * Takes raw CSV content and converts it into an array of structured
- * AuditEntry objects. Handles various CSV formats and provides fallback
- * parsing for unrecognized formats.
+ * AuditEntry objects. Handles various CSV formats including single-column data.
  * 
  * @param content - Raw CSV content of the audit trail file
  * @returns Array of parsed AuditEntry objects
@@ -35,14 +35,30 @@ export function parseAuditTrailCSV(content: string): AuditEntry[] {
   const dataRows = lines.slice(1);
   
   // Parse header to identify column positions
-  const headers = parseCSVRow(headerRow).map(h => h.toLowerCase().trim());
-  const columnMap = mapColumns(headers);
+  const headers = parseCSVRow(headerRow);
+  
+  // Check if this is a single-column CSV (all data in column A)
+  const isSingleColumn = headers.length === 1 || 
+                        (headers.length > 1 && headers.slice(1).every(h => !h.trim()));
+  
+  let columnMap: Record<string, number>;
+  
+  if (isSingleColumn) {
+    console.log('Detected single-column CSV format - attempting to parse structured data from single column');
+    columnMap = createSingleColumnMap();
+  } else {
+    console.log('Detected multi-column CSV format');
+    columnMap = mapColumns(headers.map(h => h.toLowerCase().trim()));
+  }
   
   const entries: AuditEntry[] = [];
 
   // Process each data row
   dataRows.forEach((line, index) => {
-    const entry = parseAuditRow(line, columnMap, index);
+    const entry = isSingleColumn 
+      ? parseSingleColumnAuditRow(line, index)
+      : parseAuditRow(line, columnMap, index);
+    
     if (entry) {
       entries.push(entry);
     }
@@ -57,6 +73,7 @@ export function parseAuditTrailCSV(content: string): AuditEntry[] {
     return b.timestamp.getTime() - a.timestamp.getTime();
   });
 
+  console.log(`Parsed ${entries.length} audit entries from ${isSingleColumn ? 'single-column' : 'multi-column'} CSV`);
   return entries;
 }
 
@@ -88,6 +105,191 @@ function parseCSVRow(row: string): string[] {
   
   values.push(current.trim());
   return values.map(v => v.replace(/^"|"$/g, '')); // Remove surrounding quotes
+}
+
+/**
+ * Create a dummy column map for single-column parsing
+ */
+function createSingleColumnMap(): Record<string, number> {
+  return {
+    timestamp: 0,
+    action: 0,
+    user: 0,
+    document: 0,
+    folder: 0,
+    details: 0,
+  };
+}
+
+/**
+ * Parse single-column audit row where all data is in one column
+ * 
+ * Attempts to extract structured information from a single text field
+ * that contains all the audit information.
+ * 
+ * @param row - Single column row string
+ * @param index - Row index for unique ID generation
+ * @returns Parsed AuditEntry object or null if invalid
+ */
+function parseSingleColumnAuditRow(row: string, index: number): AuditEntry | null {
+  if (!row.trim()) return null;
+  
+  // Remove quotes if the entire row is quoted
+  let cleanRow = row.trim();
+  if (cleanRow.startsWith('"') && cleanRow.endsWith('"')) {
+    cleanRow = cleanRow.slice(1, -1);
+  }
+  
+  // Initialize default values
+  let timestamp: Date | null = null;
+  let action = 'Unknown';
+  let user = 'Unknown';
+  let document = '';
+  let folder = '';
+  let details = cleanRow; // Use full row as details by default
+  let application = '';
+  
+  // Try to extract timestamp from the beginning of the row
+  const timestampPatterns = [
+    // YYYY-MM-DD HH:mm:ss format
+    /^(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}(?:\.\d{3})?)/,
+    // MM/DD/YYYY HH:mm:ss format
+    /^(\d{1,2}\/\d{1,2}\/\d{4}\s+\d{1,2}:\d{2}:\d{2}(?:\s*[AP]M)?)/i,
+    // DD/MM/YYYY HH:mm:ss format
+    /^(\d{1,2}\/\d{1,2}\/\d{4}\s+\d{1,2}:\d{2}:\d{2})/,
+    // ISO format
+    /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z?)/,
+  ];
+  
+  let remainingText = cleanRow;
+  
+  for (const pattern of timestampPatterns) {
+    const match = cleanRow.match(pattern);
+    if (match) {
+      const parsedDate = parseAuditTimestamp(match[1]);
+      if (parsedDate) {
+        timestamp = parsedDate;
+        remainingText = cleanRow.substring(match[0].length).trim();
+        break;
+      }
+    }
+  }
+  
+  // Try to extract common audit trail patterns from the remaining text
+  if (remainingText) {
+    // Look for action patterns
+    const actionPatterns = [
+      /\b(deleted?|removed?|purged?)\b/i,
+      /\b(moved?|relocated?|transferred?)\b/i,
+      /\b(exported?|sent to folder)\b/i,
+      /\b(checked out|checked in|freed)\b/i,
+      /\b(replaced?|overwrote?|updated?)\b/i,
+      /\b(created?|added?|new)\b/i,
+      /\b(modified?|changed?|edited?)\b/i,
+      /\b(copied?|duplicated?)\b/i,
+      /\b(accessed?|opened?|viewed?)\b/i,
+    ];
+    
+    for (const pattern of actionPatterns) {
+      const match = remainingText.match(pattern);
+      if (match) {
+        action = match[1];
+        break;
+      }
+    }
+    
+    // Look for user patterns (common formats: "by username", "user: username", etc.)
+    const userPatterns = [
+      /\bby\s+([a-zA-Z0-9._-]+)/i,
+      /\buser:?\s*([a-zA-Z0-9._-]+)/i,
+      /\b([a-zA-Z0-9._-]+)\s+performed/i,
+      /\b([a-zA-Z0-9._-]+)\s+(deleted|moved|created|modified)/i,
+    ];
+    
+    for (const pattern of userPatterns) {
+      const match = remainingText.match(pattern);
+      if (match) {
+        user = match[1];
+        break;
+      }
+    }
+    
+    // Look for document/file patterns
+    const documentPatterns = [
+      /\bdocument:?\s*([^\s,;]+)/i,
+      /\bfile:?\s*([^\s,;]+)/i,
+      /\b([a-zA-Z0-9._-]+\.[a-zA-Z0-9]+)\b/, // filename.extension pattern
+      /"([^"]+\.[a-zA-Z0-9]+)"/, // quoted filename
+    ];
+    
+    for (const pattern of documentPatterns) {
+      const match = remainingText.match(pattern);
+      if (match) {
+        document = match[1];
+        break;
+      }
+    }
+    
+    // Look for folder/path patterns
+    const folderPatterns = [
+      /\bfolder:?\s*([^\s,;]+)/i,
+      /\bpath:?\s*([^\s,;]+)/i,
+      /\bin\s+([^\s,;]+)/i,
+      /\bfrom\s+([^\s,;]+)/i,
+      /\bto\s+([^\s,;]+)/i,
+    ];
+    
+    for (const pattern of folderPatterns) {
+      const match = remainingText.match(pattern);
+      if (match) {
+        folder = match[1];
+        break;
+      }
+    }
+    
+    // Look for application patterns
+    const appPatterns = [
+      /\bapplication:?\s*([^\s,;]+)/i,
+      /\bapp:?\s*([^\s,;]+)/i,
+      /\bvia\s+([^\s,;]+)/i,
+    ];
+    
+    for (const pattern of appPatterns) {
+      const match = remainingText.match(pattern);
+      if (match) {
+        application = match[1];
+        break;
+      }
+    }
+  }
+  
+  // If we couldn't extract much, try to parse as comma-separated values within the single column
+  if (action === 'Unknown' && user === 'Unknown') {
+    const parts = cleanRow.split(',').map(p => p.trim());
+    if (parts.length >= 3) {
+      // Try to map parts to fields based on common audit trail formats
+      if (parts[0] && parseAuditTimestamp(parts[0])) {
+        timestamp = parseAuditTimestamp(parts[0]);
+        if (parts[1]) action = parts[1];
+        if (parts[2]) user = parts[2];
+        if (parts[3]) document = parts[3];
+        if (parts[4]) folder = parts[4];
+        if (parts[5]) details = parts[5];
+      }
+    }
+  }
+  
+  return {
+    id: `audit-${index}`,
+    timestamp,
+    action: action.trim(),
+    user: user.trim(),
+    document: document.trim(),
+    folder: folder.trim(),
+    details: details.trim(),
+    application: application?.trim() || undefined,
+    raw: row,
+  };
 }
 
 /**
@@ -182,7 +384,7 @@ function parseAuditTimestamp(str: string): Date | null {
   const formats = [
     // Standard formats
     /^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}(?:\.\d{3})?$/,
-    /^\d{2}\/\d{2}\/\d{4}\s+\d{2}:\d{2}:\d{2}$/,
+    /^\d{1,2}\/\d{1,2}\/\d{4}\s+\d{1,2}:\d{2}:\d{2}(?:\s*[AP]M)?$/i,
     /^\d{2}-\d{2}-\d{4}\s+\d{2}:\d{2}:\d{2}$/,
     // ISO format
     /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z?$/,

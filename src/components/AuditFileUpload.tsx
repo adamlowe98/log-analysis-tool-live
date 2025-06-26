@@ -19,6 +19,7 @@ interface AuditFileUploadProps {
  * - File type validation (CSV files only)
  * - File size validation (50MB limit)
  * - CSV parsing and validation
+ * - Handles single-column CSV data (all data in column A)
  * - Visual feedback during upload process
  * - Error handling with user-friendly messages
  * 
@@ -41,14 +42,16 @@ export function AuditFileUpload({ onFileUpload }: AuditFileUploadProps) {
   // ============================================================================
   
   const handleFile = useCallback(async (file: File) => {
-    // File type validation - accept CSV files only
+    // File type validation - accept CSV files and text files
     const isValidType = file.type.includes('csv') || 
                        file.name.endsWith('.csv') ||
                        file.type.includes('text/csv') ||
-                       file.type.includes('application/csv');
+                       file.type.includes('application/csv') ||
+                       file.type.includes('text/plain') ||
+                       file.name.endsWith('.txt');
 
     if (!isValidType) {
-      setError('Please upload a CSV file (.csv format)');
+      setError('Please upload a CSV file (.csv format) or text file (.txt)');
       return;
     }
 
@@ -65,28 +68,28 @@ export function AuditFileUpload({ onFileUpload }: AuditFileUploadProps) {
       // Read file content as text
       const content = await file.text();
       
-      // Basic CSV validation
+      // Basic content validation
       if (!content.trim()) {
-        setError('The CSV file appears to be empty');
+        setError('The file appears to be empty');
         return;
       }
       
-      // Check if it looks like a CSV (has commas and multiple lines)
+      // Check if it has multiple lines (basic structure check)
       const lines = content.split('\n').filter(line => line.trim());
       if (lines.length < 2) {
-        setError('The CSV file must contain at least a header row and one data row');
+        setError('The file must contain at least a header row and one data row');
         return;
       }
       
-      // Check if first line has commas (basic CSV structure check)
-      if (!lines[0].includes(',')) {
-        setError('The file does not appear to be a valid CSV format');
-        return;
-      }
+      // More flexible validation - accept files even if they don't have commas
+      // This handles the case where all data is in column A
+      console.log(`Processing ${file.name} with ${lines.length} lines`);
+      console.log('First few lines:', lines.slice(0, 3));
       
       onFileUpload(content, file.name);
     } catch (err) {
-      setError('Failed to read CSV file');
+      console.error('File reading error:', err);
+      setError('Failed to read the file. Please ensure it\'s a valid text or CSV file.');
     } finally {
       setUploading(false);
     }
@@ -178,7 +181,7 @@ export function AuditFileUpload({ onFileUpload }: AuditFileUploadProps) {
         {/* Hidden file input for click-to-upload functionality */}
         <input
           type="file"
-          accept=".csv"
+          accept=".csv,.txt"
           onChange={handleFileInput}
           className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
           disabled={uploading}
@@ -199,13 +202,13 @@ export function AuditFileUpload({ onFileUpload }: AuditFileUploadProps) {
           {/* Upload instructions and file format information */}
           <div>
             <p className="text-lg font-medium text-gray-900 dark:text-white">
-              {uploading ? 'Processing CSV file...' : 'Upload Audit Trail CSV'}
+              {uploading ? 'Processing audit trail file...' : 'Upload Audit Trail CSV'}
             </p>
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
               Drag and drop your ProjectWise audit trail CSV file here, or click to browse
             </p>
             <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-              Supports .csv files up to 50MB
+              Supports .csv and .txt files up to 50MB
             </p>
           </div>
         </div>
@@ -231,13 +234,26 @@ export function AuditFileUpload({ onFileUpload }: AuditFileUploadProps) {
           CSV FORMAT REQUIREMENTS
           ======================================================================== */}
       <div className="mt-4 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 transition-colors duration-200">
-        <h5 className="font-medium text-gray-900 dark:text-white mb-2">CSV Format Requirements:</h5>
+        <h5 className="font-medium text-gray-900 dark:text-white mb-2">Supported File Formats:</h5>
         <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
-          <li>• Must be a valid CSV file with comma-separated values</li>
-          <li>• Should include headers for: Date/Time, Action, User, Document, Folder</li>
-          <li>• Exported directly from ProjectWise audit trail functionality</li>
-          <li>• Ensure audit trail settings capture relevant activities before export</li>
+          <li>• <strong>CSV files:</strong> Standard comma-separated values format</li>
+          <li>• <strong>Single-column CSV:</strong> All data in column A (automatically detected)</li>
+          <li>• <strong>Text files:</strong> Plain text audit trail exports</li>
+          <li>• <strong>Mixed formats:</strong> Tool will attempt to parse any structured audit data</li>
         </ul>
+        
+        <div className="mt-3 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg transition-colors duration-200">
+          <div className="flex items-start space-x-2">
+            <Info className="h-4 w-4 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm text-green-800 dark:text-green-300 font-medium">Flexible Format Support</p>
+              <p className="text-sm text-green-700 dark:text-green-400 mt-1">
+                The tool automatically detects and handles various CSV formats, including files where all data 
+                is contained in a single column. No need to reformat your audit trail exports!
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
