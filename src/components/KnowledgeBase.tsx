@@ -273,7 +273,7 @@ export function KnowledgeBase({ onClose }: KnowledgeBaseProps) {
                         <p><strong>Solutions:</strong></p>
                         <ul className="ml-4 space-y-1">
                           <li>• Use `split -l 10000 logfile.log` to create smaller chunks</li>
-                          <li>• Extract specific time ranges: `grep "2025-01-" logfile.log > filtered.log`</li>
+                          <li>• Extract specific time ranges: `grep "2025-01-" logfile.log &gt; filtered.log`</li>
                           <li>• Focus on error-heavy time periods for analysis</li>
                         </ul>
                       </div>
