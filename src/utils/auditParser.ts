@@ -37,6 +37,8 @@ export function parseAuditTrailCSV(content: string): AuditEntry[] {
   // Parse header to identify column positions
   const headers = parseCSVRow(headerRow);
   
+  console.log('Detected headers:', headers);
+  
   // Check if this is a single-column CSV (all data in column A)
   const isSingleColumn = headers.length === 1 || 
                         (headers.length > 1 && headers.slice(1).every(h => !h.trim()));
@@ -48,7 +50,8 @@ export function parseAuditTrailCSV(content: string): AuditEntry[] {
     columnMap = createSingleColumnMap();
   } else {
     console.log('Detected multi-column CSV format');
-    columnMap = mapColumns(headers.map(h => h.toLowerCase().trim()));
+    columnMap = mapProjectWiseColumns(headers);
+    console.log('Column mapping:', columnMap);
   }
   
   const entries: AuditEntry[] = [];
@@ -119,6 +122,75 @@ function createSingleColumnMap(): Record<string, number> {
     folder: 0,
     details: 0,
   };
+}
+
+/**
+ * Map ProjectWise CSV headers to expected column positions
+ * 
+ * Creates a mapping of data fields to their column indices based on
+ * standard ProjectWise audit trail column names.
+ * 
+ * @param headers - Array of header names from CSV
+ * @returns Object mapping field names to column indices
+ */
+function mapProjectWiseColumns(headers: string[]): Record<string, number> {
+  const map: Record<string, number> = {};
+  
+  headers.forEach((header, index) => {
+    const normalizedHeader = header.toLowerCase().trim();
+    
+    // Map ProjectWise standard column names
+    switch (normalizedHeader) {
+      case 'object type':
+        map.objectType = index;
+        break;
+      case 'object name':
+        map.document = index; // Object Name is typically the document/file name
+        break;
+      case 'action name':
+        map.action = index;
+        break;
+      case 'date/time':
+        map.timestamp = index;
+        break;
+      case 'user name':
+        map.user = index;
+        break;
+      case 'object description':
+        map.description = index;
+        break;
+      case 'additional data':
+        map.details = index;
+        break;
+      case 'comments':
+        map.comments = index;
+        break;
+      case 'path':
+        map.folder = index;
+        break;
+      case 'user description':
+        map.userDescription = index;
+        break;
+      default:
+        // Fallback mapping for variations
+        if (normalizedHeader.includes('date') || normalizedHeader.includes('time')) {
+          map.timestamp = index;
+        } else if (normalizedHeader.includes('action') || normalizedHeader.includes('event')) {
+          map.action = index;
+        } else if (normalizedHeader.includes('user') && normalizedHeader.includes('name')) {
+          map.user = index;
+        } else if (normalizedHeader.includes('object') && normalizedHeader.includes('name')) {
+          map.document = index;
+        } else if (normalizedHeader.includes('path') || normalizedHeader.includes('folder')) {
+          map.folder = index;
+        } else if (normalizedHeader.includes('comment') || normalizedHeader.includes('additional')) {
+          map.details = index;
+        }
+        break;
+    }
+  });
+  
+  return map;
 }
 
 /**
@@ -293,40 +365,6 @@ function parseSingleColumnAuditRow(row: string, index: number): AuditEntry | nul
 }
 
 /**
- * Map CSV headers to expected column positions
- * 
- * Creates a mapping of data fields to their column indices based on
- * common header names used in ProjectWise audit trails.
- * 
- * @param headers - Array of header names from CSV
- * @returns Object mapping field names to column indices
- */
-function mapColumns(headers: string[]): Record<string, number> {
-  const map: Record<string, number> = {};
-  
-  headers.forEach((header, index) => {
-    // Map common header variations to standard field names
-    if (header.includes('date') || header.includes('time') || header.includes('timestamp')) {
-      map.timestamp = index;
-    } else if (header.includes('action') || header.includes('event') || header.includes('operation')) {
-      map.action = index;
-    } else if (header.includes('user') || header.includes('person') || header.includes('who')) {
-      map.user = index;
-    } else if (header.includes('document') || header.includes('file') || header.includes('name')) {
-      map.document = index;
-    } else if (header.includes('folder') || header.includes('path') || header.includes('location')) {
-      map.folder = index;
-    } else if (header.includes('detail') || header.includes('comment') || header.includes('description')) {
-      map.details = index;
-    } else if (header.includes('application') || header.includes('app') || header.includes('program')) {
-      map.application = index;
-    }
-  });
-  
-  return map;
-}
-
-/**
  * Parse individual audit row into structured AuditEntry
  * 
  * Extracts and validates data from a single CSV row using the column mapping.
@@ -347,11 +385,34 @@ function parseAuditRow(row: string, columnMap: Record<string, number>, index: nu
   const user = values[columnMap.user] || 'Unknown';
   const document = values[columnMap.document] || '';
   const folder = values[columnMap.folder] || '';
-  const details = values[columnMap.details] || '';
+  
+  // Combine details from multiple possible columns
+  let details = '';
+  const detailSources = [
+    values[columnMap.details],
+    values[columnMap.comments],
+    values[columnMap.description],
+    values[columnMap.userDescription]
+  ].filter(Boolean);
+  
+  if (detailSources.length > 0) {
+    details = detailSources.join(' | ');
+  }
+  
   const application = values[columnMap.application] || undefined;
   
   // Parse timestamp
   const timestamp = parseAuditTimestamp(timestampStr);
+  
+  // Log the parsed entry for debugging
+  console.log(`Parsed entry ${index}:`, {
+    timestamp: timestamp ? timestamp.toISOString() : 'null',
+    action,
+    user,
+    document,
+    folder,
+    details: details.substring(0, 50) + (details.length > 50 ? '...' : ''),
+  });
   
   return {
     id: `audit-${index}`,
