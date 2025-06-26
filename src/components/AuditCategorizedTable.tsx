@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Search, Filter, Download, FileX, Move, RefreshCw, Replace, MoreHorizontal, AlertTriangle, Clock } from 'lucide-react';
+import { Search, Filter, Download, FileX, Move, RefreshCw, Replace, MoreHorizontal, AlertTriangle, Clock, User, FolderOpen, FileText } from 'lucide-react';
 import { AuditEntry, AuditCategory, CategorizedAuditEntries } from '../types/audit';
 import { categorizeAllEntries } from '../utils/auditParser';
 import { format } from 'date-fns';
@@ -12,7 +12,7 @@ export function AuditCategorizedTable({ entries }: AuditCategorizedTableProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<AuditCategory | 'all'>('all');
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(50);
+  const [pageSize, setPageSize] = useState(25); // Reduced default page size for better readability
 
   // Categorize entries
   const categorizedEntries = useMemo(() => categorizeAllEntries(entries), [entries]);
@@ -84,7 +84,7 @@ export function AuditCategorizedTable({ entries }: AuditCategorizedTableProps) {
     if (!timestamp || isNaN(timestamp.getTime())) {
       return 'N/A';
     }
-    return format(timestamp, 'yyyy-MM-dd HH:mm:ss');
+    return format(timestamp, 'MMM dd, yyyy HH:mm:ss');
   };
 
   const exportToCSV = () => {
@@ -147,7 +147,7 @@ export function AuditCategorizedTable({ entries }: AuditCategorizedTableProps) {
                 placeholder="Search events..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 transition-colors duration-200"
+                className="pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 transition-colors duration-200 w-64"
               />
             </div>
 
@@ -163,7 +163,7 @@ export function AuditCategorizedTable({ entries }: AuditCategorizedTableProps) {
         </div>
 
         {/* Category Tabs */}
-        <div className="mt-4 flex flex-wrap gap-2">
+        <div className="mt-6 flex flex-wrap gap-3">
           {categories.map((category) => (
             <button
               key={category.id}
@@ -171,22 +171,26 @@ export function AuditCategorizedTable({ entries }: AuditCategorizedTableProps) {
                 setSelectedCategory(category.id as AuditCategory | 'all');
                 setCurrentPage(1);
               }}
-              className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+              className={`flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 ${
                 selectedCategory === category.id
-                  ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800'
-                  : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 border border-transparent'
+                  ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 border-2 border-blue-200 dark:border-blue-800 shadow-sm'
+                  : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 border-2 border-transparent hover:border-gray-300 dark:hover:border-gray-600'
               }`}
             >
               {getCategoryIcon(category.id as AuditCategory | 'all')}
               <span>{category.name}</span>
-              <span className="bg-white dark:bg-gray-800 px-2 py-0.5 rounded-full text-xs">
+              <span className={`px-2 py-1 rounded-full text-xs font-bold ${
+                selectedCategory === category.id
+                  ? 'bg-blue-600 dark:bg-blue-500 text-white'
+                  : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300'
+              }`}>
                 {category.count}
               </span>
             </button>
           ))}
         </div>
 
-        <div className="mt-4 flex items-center justify-between text-sm text-gray-500 dark:text-gray-400">
+        <div className="mt-6 flex items-center justify-between text-sm text-gray-500 dark:text-gray-400">
           <span>
             Showing {paginatedEntries.length} of {filteredEntries.length} events
             {filteredEntries.length !== entries.length && ` (filtered from ${entries.length} total)`}
@@ -200,34 +204,34 @@ export function AuditCategorizedTable({ entries }: AuditCategorizedTableProps) {
                 setPageSize(Number(e.target.value));
                 setCurrentPage(1);
               }}
-              className="border border-gray-300 dark:border-gray-600 rounded px-2 py-1 bg-white dark:bg-gray-700 text-gray-900 dark:text-white transition-colors duration-200"
+              className="border border-gray-300 dark:border-gray-600 rounded px-3 py-1 bg-white dark:bg-gray-700 text-gray-900 dark:text-white transition-colors duration-200"
             >
+              <option value={10}>10</option>
               <option value={25}>25</option>
               <option value={50}>50</option>
-              <option value={100}>100</option>
             </select>
           </div>
         </div>
       </div>
 
-      {/* Table */}
+      {/* Enhanced Table with Better Spacing */}
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead className="bg-gray-50 dark:bg-gray-700 transition-colors duration-200">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+              <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-48">
                 Timestamp
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+              <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-40">
                 Action
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+              <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-48">
                 User
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                Document
+              <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                Document & Location
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+              <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-64">
                 Details
               </th>
             </tr>
@@ -241,53 +245,87 @@ export function AuditCategorizedTable({ entries }: AuditCategorizedTableProps) {
 
               return (
                 <tr key={entry.id} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-600 dark:text-gray-300">
+                  {/* Timestamp Column */}
+                  <td className="px-6 py-5 text-sm font-mono text-gray-600 dark:text-gray-300">
                     <div className="flex items-center space-x-2">
-                      <Clock className="h-4 w-4 text-gray-400 dark:text-gray-500" />
-                      <span>{formatTimestamp(entry.timestamp)}</span>
+                      <Clock className="h-4 w-4 text-gray-400 dark:text-gray-500 flex-shrink-0" />
+                      <div className="flex flex-col">
+                        <span className="font-medium">{formatTimestamp(entry.timestamp)}</span>
+                      </div>
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center space-x-2">
-                      {getCategoryIcon(category)}
-                      <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full border transition-colors duration-200 ${getCategoryBadgeClass(category)}`}>
-                        {entry.action}
-                      </span>
+
+                  {/* Action Column */}
+                  <td className="px-6 py-5">
+                    <div className="flex flex-col space-y-2">
+                      <div className="flex items-center space-x-2">
+                        {getCategoryIcon(category)}
+                        <span className={`inline-flex px-3 py-1 text-xs font-medium rounded-full border transition-colors duration-200 ${getCategoryBadgeClass(category)}`}>
+                          {entry.action}
+                        </span>
+                      </div>
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
-                    <div className="flex items-center space-x-2">
-                      <div className="bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold">
+
+                  {/* User Column */}
+                  <td className="px-6 py-5 text-sm text-gray-900 dark:text-gray-100">
+                    <div className="flex items-center space-x-3">
+                      <div className="bg-gradient-to-br from-blue-500 to-blue-600 text-white w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold shadow-sm">
                         {entry.user.charAt(0).toUpperCase()}
                       </div>
-                      <span className="font-medium">{entry.user}</span>
+                      <div className="flex flex-col">
+                        <span className="font-medium text-gray-900 dark:text-gray-100">{entry.user}</span>
+                        {entry.application && (
+                          <span className="text-xs text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-2 py-1 rounded mt-1">
+                            {entry.application}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </td>
-                  <td className="px-6 py-4 text-sm text-gray-900 dark:text-gray-100">
-                    <div className="space-y-1">
+
+                  {/* Document & Location Column */}
+                  <td className="px-6 py-5 text-sm text-gray-900 dark:text-gray-100">
+                    <div className="space-y-3">
+                      {/* Document */}
                       {entry.document && (
-                        <div className="font-mono text-xs bg-gray-100 dark:bg-gray-600 px-2 py-1 rounded">
-                          {entry.document}
+                        <div className="flex items-start space-x-2">
+                          <FileText className="h-4 w-4 text-green-500 dark:text-green-400 flex-shrink-0 mt-0.5" />
+                          <div className="flex flex-col">
+                            <span className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Document</span>
+                            <span className="font-mono text-sm bg-gray-100 dark:bg-gray-600 px-2 py-1 rounded mt-1 break-all">
+                              {entry.document}
+                            </span>
+                          </div>
                         </div>
                       )}
+                      
+                      {/* Folder/Path */}
                       {entry.folder && (
-                        <div className="text-xs text-gray-500 dark:text-gray-400">
-                          📁 {entry.folder}
+                        <div className="flex items-start space-x-2">
+                          <FolderOpen className="h-4 w-4 text-yellow-500 dark:text-yellow-400 flex-shrink-0 mt-0.5" />
+                          <div className="flex flex-col">
+                            <span className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Path</span>
+                            <span className="text-sm text-gray-600 dark:text-gray-400 mt-1 break-all">
+                              {entry.folder}
+                            </span>
+                          </div>
                         </div>
                       )}
                     </div>
                   </td>
-                  <td className="px-6 py-4 text-sm text-gray-900 dark:text-gray-100">
+
+                  {/* Details Column */}
+                  <td className="px-6 py-5 text-sm text-gray-900 dark:text-gray-100">
                     <div className="max-w-xs">
-                      {entry.details && (
-                        <p className="text-xs text-gray-600 dark:text-gray-400 truncate" title={entry.details}>
-                          {entry.details}
-                        </p>
-                      )}
-                      {entry.application && (
-                        <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
-                          App: {entry.application}
-                        </p>
+                      {entry.details ? (
+                        <div className="bg-gray-50 dark:bg-gray-700 p-3 rounded-lg border border-gray-200 dark:border-gray-600">
+                          <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
+                            {entry.details}
+                          </p>
+                        </div>
+                      ) : (
+                        <span className="text-gray-400 dark:text-gray-500 italic text-xs">No additional details</span>
                       )}
                     </div>
                   </td>
@@ -298,29 +336,33 @@ export function AuditCategorizedTable({ entries }: AuditCategorizedTableProps) {
         </table>
       </div>
 
-      {/* Pagination */}
+      {/* Enhanced Pagination */}
       {totalPages > 1 && (
-        <div className="px-6 py-3 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between transition-colors duration-200">
-          <div className="flex items-center space-x-2">
+        <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between transition-colors duration-200">
+          <div className="flex items-center space-x-3">
             <button
               onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
               disabled={currentPage === 1}
-              className="px-3 py-1 border border-gray-300 dark:border-gray-600 rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white transition-colors duration-200"
+              className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white transition-colors duration-200 font-medium"
             >
               Previous
             </button>
             
-            <span className="text-sm text-gray-600 dark:text-gray-300">
+            <span className="text-sm text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 px-3 py-2 rounded-lg">
               Page {currentPage} of {totalPages}
             </span>
             
             <button
               onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
               disabled={currentPage === totalPages}
-              className="px-3 py-1 border border-gray-300 dark:border-gray-600 rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white transition-colors duration-200"
+              className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white transition-colors duration-200 font-medium"
             >
               Next
             </button>
+          </div>
+          
+          <div className="text-sm text-gray-500 dark:text-gray-400">
+            Total: {filteredEntries.length} events
           </div>
         </div>
       )}
