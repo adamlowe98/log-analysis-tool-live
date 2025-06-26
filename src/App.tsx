@@ -11,12 +11,13 @@ import { KnowledgeBase } from './components/KnowledgeBase';
 import { AuditFileUpload } from './components/AuditFileUpload';
 import { AuditSummary } from './components/AuditSummary';
 import { AuditCategorizedTable } from './components/AuditCategorizedTable';
+import { AuditTable } from './components/AuditTable';
 import { parseLogFile, generateLogSummary } from './utils/logParser';
 import { parseAuditTrailCSV, generateAuditSummary } from './utils/auditParser';
 import { LogEntry, LogSummary as LogSummaryType } from './types/log';
 import { AuditEntry, AuditSummary as AuditSummaryType } from './types/audit';
 import { saveAnalysisSession } from './lib/supabase';
-import { BarChart3, FileText, TrendingUp, RotateCcw, FileDown, Bot, Shield, Activity, BookOpen, FileSpreadsheet, ToggleLeft, ToggleRight } from 'lucide-react';
+import { BarChart3, FileText, TrendingUp, RotateCcw, FileDown, Bot, Shield, Activity, BookOpen, FileSpreadsheet, Table } from 'lucide-react';
 
 /**
  * Interface for additional content that can be added to reports
@@ -293,7 +294,7 @@ function App() {
       return [
         { id: 'summary', name: 'Summary', icon: FileText },
         { id: 'categorized', name: 'Categorized Events', icon: BarChart3 },
-        { id: 'table', name: 'All Events', icon: TrendingUp },
+        { id: 'table', name: 'All Events', icon: Table },
       ];
     }
   };
@@ -507,7 +508,7 @@ function App() {
                   appMode === 'logs' ? (
                     <LogTable logs={logs} />
                   ) : (
-                    <AuditCategorizedTable entries={auditEntries} />
+                    <AuditTable entries={auditEntries} />
                   )
                 )}
               </div>
