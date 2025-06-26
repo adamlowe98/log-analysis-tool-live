@@ -371,43 +371,32 @@ function App() {
             {/* Header action buttons */}
             <div className="flex items-center space-x-4">
               
-              {/* Enhanced Mode Toggle Switch with Smooth Transition */}
-              <div className="relative bg-gray-100 dark:bg-gray-700 rounded-xl p-1.5 transition-all duration-300 shadow-inner">
-                {/* Background slider */}
-                <div className={`absolute top-1.5 w-32 h-10 bg-gradient-to-r ${
-                  appMode === 'logs' 
-                    ? 'from-blue-600 to-indigo-600' 
-                    : 'from-green-600 to-teal-600'
-                } rounded-lg shadow-lg transition-all duration-500 ease-in-out transform ${
-                  appMode === 'logs' ? 'translate-x-0' : 'translate-x-32'
-                } ${isTransitioning ? 'scale-95' : 'scale-100'}`}></div>
-                
-                <div className="relative flex">
-                  <button
-                    onClick={() => handleModeSwitch('logs')}
-                    disabled={isTransitioning}
-                    className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 w-32 justify-center ${
-                      appMode === 'logs'
-                        ? 'text-white shadow-sm z-10'
-                        : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
-                    } ${isTransitioning ? 'opacity-70' : 'opacity-100'}`}
-                  >
-                    <Activity className="h-4 w-4" />
-                    <span>Log Analysis</span>
-                  </button>
-                  <button
-                    onClick={() => handleModeSwitch('audit')}
-                    disabled={isTransitioning}
-                    className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 w-32 justify-center ${
-                      appMode === 'audit'
-                        ? 'text-white shadow-sm z-10'
-                        : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
-                    } ${isTransitioning ? 'opacity-70' : 'opacity-100'}`}
-                  >
-                    <FileSpreadsheet className="h-4 w-4" />
-                    <span>Audit Trail</span>
-                  </button>
-                </div>
+              {/* Clean Mode Toggle Switch */}
+              <div className="flex bg-gray-100 dark:bg-gray-700 rounded-lg p-1 transition-colors duration-200">
+                <button
+                  onClick={() => handleModeSwitch('logs')}
+                  disabled={isTransitioning}
+                  className={`flex items-center space-x-2 px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
+                    appMode === 'logs'
+                      ? 'bg-white dark:bg-gray-600 text-blue-600 dark:text-blue-400 shadow-sm'
+                      : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
+                  } ${isTransitioning ? 'opacity-70' : 'opacity-100'}`}
+                >
+                  <Activity className="h-4 w-4" />
+                  <span>Log Analysis</span>
+                </button>
+                <button
+                  onClick={() => handleModeSwitch('audit')}
+                  disabled={isTransitioning}
+                  className={`flex items-center space-x-2 px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
+                    appMode === 'audit'
+                      ? 'bg-white dark:bg-gray-600 text-green-600 dark:text-green-400 shadow-sm'
+                      : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
+                  } ${isTransitioning ? 'opacity-70' : 'opacity-100'}`}
+                >
+                  <FileSpreadsheet className="h-4 w-4" />
+                  <span>Audit Trail</span>
+                </button>
               </div>
               
               {/* Knowledge Base access button */}
