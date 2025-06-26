@@ -8,10 +8,15 @@ import { GeminiChatbot } from './components/GeminiChatbot';
 import { PasswordProtection } from './components/PasswordProtection';
 import { ThemeToggle } from './components/ThemeToggle';
 import { KnowledgeBase } from './components/KnowledgeBase';
+import { AuditFileUpload } from './components/AuditFileUpload';
+import { AuditSummary } from './components/AuditSummary';
+import { AuditCategorizedTable } from './components/AuditCategorizedTable';
 import { parseLogFile, generateLogSummary } from './utils/logParser';
+import { parseAuditTrailCSV, generateAuditSummary } from './utils/auditParser';
 import { LogEntry, LogSummary as LogSummaryType } from './types/log';
+import { AuditEntry, AuditSummary as AuditSummaryType } from './types/audit';
 import { saveAnalysisSession } from './lib/supabase';
-import { BarChart3, FileText, TrendingUp, RotateCcw, FileDown, Bot, Shield, Activity, BookOpen } from 'lucide-react';
+import { BarChart3, FileText, TrendingUp, RotateCcw, FileDown, Bot, Shield, Activity, BookOpen, FileSpreadsheet, ToggleLeft, ToggleRight } from 'lucide-react';
 
 /**
  * Interface for additional content that can be added to reports
@@ -24,14 +29,20 @@ interface AddedContent {
 }
 
 /**
+ * Application mode type
+ */
+type AppMode = 'logs' | 'audit';
+
+/**
  * Main Application Component
  * 
- * This is the root component that orchestrates the entire log analysis workflow:
+ * This is the root component that orchestrates the entire application workflow:
  * 1. Authentication - Password protection for secure access
- * 2. File Upload - Handles log file upload and parsing
- * 3. Analysis Display - Shows summary, charts, and detailed log table
- * 4. Report Generation - Creates PDF reports with analysis results
- * 5. AI Integration - Optional AI assistant for enhanced insights
+ * 2. Mode Selection - Switch between log analysis and audit trail analysis
+ * 3. File Upload - Handles log file upload and parsing
+ * 4. Analysis Display - Shows summary, charts, and detailed tables
+ * 5. Report Generation - Creates PDF reports with analysis results
+ * 6. AI Integration - Optional AI assistant for enhanced insights
  * 
  * The app maintains all analysis state and coordinates between components.
  * No data caching is implemented to ensure fresh processing and data security.
@@ -48,44 +59,56 @@ function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   
   /**
+   * Application mode - switches between log analysis and audit trail analysis
+   */
+  const [appMode, setAppMode] = useState<AppMode>('logs');
+  
+  /**
    * Knowledge base visibility state
    * Controls whether the developer documentation is shown
    */
   const [showKnowledgeBase, setShowKnowledgeBase] = useState(false);
   
+  // LOG ANALYSIS STATE
   /**
-   * Core analysis data - parsed log entries from uploaded file
-   * This is the primary data structure containing all log information
+   * Core log analysis data - parsed log entries from uploaded file
    */
   const [logs, setLogs] = useState<LogEntry[]>([]);
   
   /**
-   * Analysis summary - aggregated statistics and insights
-   * Generated from the logs array and used throughout the UI
+   * Log analysis summary - aggregated statistics and insights
    */
-  const [summary, setSummary] = useState<LogSummaryType | null>(null);
+  const [logSummary, setLogSummary] = useState<LogSummaryType | null>(null);
+  
+  // AUDIT TRAIL STATE
+  /**
+   * Core audit trail data - parsed audit entries from uploaded CSV
+   */
+  const [auditEntries, setAuditEntries] = useState<AuditEntry[]>([]);
   
   /**
-   * Original filename of the uploaded log file
-   * Used for display purposes and report generation
+   * Audit trail analysis summary - aggregated statistics and insights
+   */
+  const [auditSummary, setAuditSummary] = useState<AuditSummaryType | null>(null);
+  
+  // SHARED STATE
+  /**
+   * Original filename of the uploaded file
    */
   const [filename, setFilename] = useState<string>('');
   
   /**
    * Active tab state - controls which analysis view is displayed
-   * Manages the main navigation between different analysis sections
    */
-  const [activeTab, setActiveTab] = useState<'summary' | 'charts' | 'table' | 'report'>('summary');
+  const [activeTab, setActiveTab] = useState<'summary' | 'charts' | 'table' | 'report' | 'categorized'>('summary');
   
   /**
    * Reset operation state - provides user feedback during data clearing
-   * Shows loading state when user clicks "Start Over"
    */
   const [isResetting, setIsResetting] = useState(false);
   
   /**
    * Additional report content from AI assistant
-   * Stores custom analysis sections that can be added to PDF reports
    */
   const [addedReportContent, setAddedReportContent] = useState<AddedContent[]>([]);
 
@@ -95,7 +118,6 @@ function App() {
   
   /**
    * Check for existing authentication on component mount
-   * Restores authentication state from session storage to persist login
    */
   useEffect(() => {
     const authStatus = sessionStorage.getItem('logAnalyzerAuth');
@@ -106,7 +128,6 @@ function App() {
 
   /**
    * Handle successful authentication
-   * Sets authentication state and persists to session storage
    */
   const handleAuthenticated = () => {
     setIsAuthenticated(true);
@@ -114,62 +135,81 @@ function App() {
   };
 
   // ============================================================================
+  // MODE SWITCHING
+  // ============================================================================
+  
+  /**
+   * Handle switching between log analysis and audit trail modes
+   */
+  const handleModeSwitch = (newMode: AppMode) => {
+    setAppMode(newMode);
+    // Reset all data when switching modes
+    setLogs([]);
+    setLogSummary(null);
+    setAuditEntries([]);
+    setAuditSummary(null);
+    setFilename('');
+    setActiveTab('summary');
+    setAddedReportContent([]);
+  };
+
+  // ============================================================================
   // FILE PROCESSING AND ANALYSIS
   // ============================================================================
   
   /**
-   * Handle file upload and processing
-   * 
-   * This is the core workflow that:
-   * 1. Parses the uploaded log file content
-   * 2. Generates analysis summary and statistics
-   * 3. Updates application state with results
-   * 4. Saves session metadata to database (without log content)
-   * 
-   * No caching is applied to ensure fresh processing every time
-   * 
-   * @param content - Raw text content of the uploaded log file
-   * @param fileName - Original filename for reference
+   * Handle log file upload and processing
    */
-  const handleFileUpload = async (content: string, fileName: string) => {
+  const handleLogFileUpload = async (content: string, fileName: string) => {
     try {
       console.log('Starting fresh log file processing...');
       
-      // Parse log file content into structured LogEntry objects
-      // This handles various log formats and extracts timestamps, levels, messages
       const parsedLogs = parseLogFile(content);
+      const summary = generateLogSummary(parsedLogs);
       
-      // Generate comprehensive analysis summary from parsed logs
-      // Includes error counts, critical issues, time ranges, etc.
-      const logSummary = generateLogSummary(parsedLogs);
-      
-      // Update application state with analysis results
       setLogs(parsedLogs);
-      setSummary(logSummary);
+      setLogSummary(summary);
       setFilename(fileName);
-      setActiveTab('summary'); // Navigate to summary view
+      setActiveTab('summary');
 
       console.log(`Processed ${parsedLogs.length} log entries from ${fileName}`);
 
       // Save analysis session metadata to database
-      // IMPORTANT: Only metadata is saved, never actual log content
       try {
         await saveAnalysisSession({
           filename: fileName,
-          total_entries: logSummary.totalEntries,
-          error_count: logSummary.errorCount,
-          warning_count: logSummary.warningCount,
-          info_count: logSummary.infoCount,
-          debug_count: logSummary.debugCount,
+          total_entries: summary.totalEntries,
+          error_count: summary.errorCount,
+          warning_count: summary.warningCount,
+          info_count: summary.infoCount,
+          debug_count: summary.debugCount,
         });
       } catch (dbError) {
         console.error('Failed to save analysis session:', dbError);
-        // Continue with analysis even if database save fails
-        // This ensures the tool works even without database connectivity
       }
     } catch (error) {
       console.error('Error parsing log file:', error);
-      // TODO: Add user-facing error handling here
+    }
+  };
+
+  /**
+   * Handle audit trail CSV upload and processing
+   */
+  const handleAuditFileUpload = async (content: string, fileName: string) => {
+    try {
+      console.log('Starting fresh audit trail processing...');
+      
+      const parsedEntries = parseAuditTrailCSV(content);
+      const summary = generateAuditSummary(parsedEntries);
+      
+      setAuditEntries(parsedEntries);
+      setAuditSummary(summary);
+      setFilename(fileName);
+      setActiveTab('summary');
+
+      console.log(`Processed ${parsedEntries.length} audit entries from ${fileName}`);
+    } catch (error) {
+      console.error('Error parsing audit trail CSV:', error);
     }
   };
 
@@ -179,24 +219,21 @@ function App() {
   
   /**
    * Reset application to initial state
-   * 
-   * Clears all analysis data and returns to file upload screen
-   * Includes visual feedback for better user experience
-   * No cache clearing needed since we don't cache data
    */
   const handleReset = async () => {
     setIsResetting(true);
     
     console.log('Resetting application state...');
     
-    // Clear all analysis state including AI-generated content
+    // Clear all analysis state
     setLogs([]);
-    setSummary(null);
+    setLogSummary(null);
+    setAuditEntries([]);
+    setAuditSummary(null);
     setFilename('');
     setActiveTab('summary');
     setAddedReportContent([]);
     
-    // Small delay for better UX - shows loading state briefly
     setTimeout(() => {
       setIsResetting(false);
       console.log('Application reset complete');
@@ -209,11 +246,6 @@ function App() {
   
   /**
    * Add content from AI assistant to report
-   * 
-   * Allows AI-generated insights to be included in PDF reports
-   * Each piece of content is timestamped and can be removed individually
-   * 
-   * @param content - AI-generated analysis content
    */
   const handleAddToReport = (content: string) => {
     const newContent: AddedContent = {
@@ -226,8 +258,6 @@ function App() {
 
   /**
    * Remove AI-generated content from report
-   * 
-   * @param id - Unique identifier of content to remove
    */
   const handleRemoveFromReport = (id: string) => {
     setAddedReportContent(prev => prev.filter(item => item.id !== id));
@@ -242,25 +272,35 @@ function App() {
     return <PasswordProtection onAuthenticated={handleAuthenticated} />;
   }
 
-  // Show knowledge base (developer documentation) if requested
+  // Show knowledge base if requested
   if (showKnowledgeBase) {
     return <KnowledgeBase onClose={() => setShowKnowledgeBase(false)} />;
   }
 
   // ============================================================================
-  // MAIN NAVIGATION CONFIGURATION
+  // TAB CONFIGURATION BASED ON MODE
   // ============================================================================
   
-  /**
-   * Tab configuration for main navigation
-   * Each tab represents a different view of the analysis results
-   */
-  const tabs = [
-    { id: 'summary', name: 'Summary', icon: FileText },
-    { id: 'charts', name: 'Charts', icon: BarChart3 },
-    { id: 'table', name: 'Log Table', icon: TrendingUp },
-    { id: 'report', name: 'Generate Report', icon: FileDown },
-  ];
+  const getTabsForMode = () => {
+    if (appMode === 'logs') {
+      return [
+        { id: 'summary', name: 'Summary', icon: FileText },
+        { id: 'charts', name: 'Charts', icon: BarChart3 },
+        { id: 'table', name: 'Log Table', icon: TrendingUp },
+        { id: 'report', name: 'Generate Report', icon: FileDown },
+      ];
+    } else {
+      return [
+        { id: 'summary', name: 'Summary', icon: FileText },
+        { id: 'categorized', name: 'Categorized Events', icon: BarChart3 },
+        { id: 'table', name: 'All Events', icon: TrendingUp },
+      ];
+    }
+  };
+
+  const tabs = getTabsForMode();
+  const hasData = appMode === 'logs' ? logs.length > 0 : auditEntries.length > 0;
+  const currentSummary = appMode === 'logs' ? logSummary : auditSummary;
 
   // ============================================================================
   // MAIN APPLICATION RENDER
@@ -279,27 +319,58 @@ function App() {
             {/* Application branding and title */}
             <div className="flex items-center space-x-3">
               <div className="relative">
-                {/* Animated gradient background for logo */}
                 <div className="absolute inset-0 bg-gradient-to-br from-blue-500 via-purple-600 to-indigo-700 rounded-xl animate-pulse opacity-20"></div>
                 <div className="relative bg-gradient-to-br from-blue-600 via-purple-600 to-indigo-700 p-3 rounded-xl shadow-lg">
-                  <Activity className="h-7 w-7 text-white" />
-                  {/* Status indicator - shows system is active */}
+                  {appMode === 'logs' ? (
+                    <Activity className="h-7 w-7 text-white" />
+                  ) : (
+                    <FileSpreadsheet className="h-7 w-7 text-white" />
+                  )}
                   <div className="absolute top-1 right-1 w-2 h-2 bg-red-400 rounded-full animate-ping"></div>
                   <div className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></div>
                 </div>
               </div>
               <div>
                 <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-                  Log Analysis Tool
+                  {appMode === 'logs' ? 'Log Analysis Tool' : 'Audit Trail Investigator'}
                 </h1>
                 <p className="text-sm text-gray-600 dark:text-gray-300">
-                  Upload and analyze log files with detailed insights and visualizations
+                  {appMode === 'logs' 
+                    ? 'Upload and analyze log files with detailed insights and visualizations'
+                    : 'Investigate ProjectWise audit trails for missing files and security events'
+                  }
                 </p>
               </div>
             </div>
             
             {/* Header action buttons */}
             <div className="flex items-center space-x-4">
+              
+              {/* Mode Toggle Switch */}
+              <div className="flex items-center space-x-3 bg-gray-100 dark:bg-gray-700 rounded-lg p-1 transition-colors duration-200">
+                <button
+                  onClick={() => handleModeSwitch('logs')}
+                  className={`flex items-center space-x-2 px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
+                    appMode === 'logs'
+                      ? 'bg-blue-600 text-white shadow-md'
+                      : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
+                  }`}
+                >
+                  <Activity className="h-4 w-4" />
+                  <span>Log Analysis</span>
+                </button>
+                <button
+                  onClick={() => handleModeSwitch('audit')}
+                  className={`flex items-center space-x-2 px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
+                    appMode === 'audit'
+                      ? 'bg-blue-600 text-white shadow-md'
+                      : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
+                  }`}
+                >
+                  <FileSpreadsheet className="h-4 w-4" />
+                  <span>Audit Trail</span>
+                </button>
+              </div>
               
               {/* Knowledge Base access button */}
               <button
@@ -313,8 +384,8 @@ function App() {
               {/* Dark/Light theme toggle */}
               <ThemeToggle />
               
-              {/* Reset button - only shown when analysis data exists */}
-              {(logs.length > 0 || filename) && (
+              {/* Reset button - only shown when data exists */}
+              {(hasData || filename) && (
                 <button
                   onClick={handleReset}
                   disabled={isResetting}
@@ -330,11 +401,15 @@ function App() {
           {/* File information display - shown when file is loaded */}
           {filename && (
             <div className="mt-4 flex items-center text-sm text-gray-600 dark:text-gray-300">
-              <FileText className="h-4 w-4 mr-2" />
+              {appMode === 'logs' ? (
+                <FileText className="h-4 w-4 mr-2" />
+              ) : (
+                <FileSpreadsheet className="h-4 w-4 mr-2" />
+              )}
               <span>Analyzing: <strong>{filename}</strong></span>
-              {summary && (
+              {currentSummary && (
                 <span className="ml-4 text-gray-500 dark:text-gray-400">
-                  • {summary.totalEntries.toLocaleString()} entries
+                  • {currentSummary.totalEntries.toLocaleString()} entries
                 </span>
               )}
             </div>
@@ -347,10 +422,14 @@ function App() {
           ======================================================================== */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         
-        {/* Show file upload when no logs are loaded */}
-        {!logs.length ? (
+        {/* Show file upload when no data is loaded */}
+        {!hasData ? (
           <div className="flex items-center justify-center min-h-96">
-            <FileUpload onFileUpload={handleFileUpload} />
+            {appMode === 'logs' ? (
+              <FileUpload onFileUpload={handleLogFileUpload} />
+            ) : (
+              <AuditFileUpload onFileUpload={handleAuditFileUpload} />
+            )}
           </div>
         ) : (
           <div className="space-y-6">
@@ -385,47 +464,70 @@ function App() {
                 ================================================================ */}
             <div className="relative">
               
-              {/* Summary Panel - Overview statistics and key metrics */}
+              {/* Summary Panel */}
               <div className={`transition-all duration-300 ease-in-out ${
                 activeTab === 'summary' ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 absolute inset-0 pointer-events-none'
               }`}>
-                {activeTab === 'summary' && summary && (
-                  <LogSummary summary={summary} />
+                {activeTab === 'summary' && currentSummary && (
+                  appMode === 'logs' ? (
+                    <LogSummary summary={logSummary!} />
+                  ) : (
+                    <AuditSummary summary={auditSummary!} />
+                  )
                 )}
               </div>
               
-              {/* Charts Panel - Visual analysis with graphs and charts */}
-              <div className={`transition-all duration-300 ease-in-out ${
-                activeTab === 'charts' ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 absolute inset-0 pointer-events-none'
-              }`}>
-                {activeTab === 'charts' && (
-                  <LogCharts logs={logs} />
-                )}
-              </div>
+              {/* Charts Panel (Log Analysis Only) */}
+              {appMode === 'logs' && (
+                <div className={`transition-all duration-300 ease-in-out ${
+                  activeTab === 'charts' ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 absolute inset-0 pointer-events-none'
+                }`}>
+                  {activeTab === 'charts' && (
+                    <LogCharts logs={logs} />
+                  )}
+                </div>
+              )}
               
-              {/* Table Panel - Detailed log entry browser with filtering */}
+              {/* Categorized Events Panel (Audit Trail Only) */}
+              {appMode === 'audit' && (
+                <div className={`transition-all duration-300 ease-in-out ${
+                  activeTab === 'categorized' ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 absolute inset-0 pointer-events-none'
+                }`}>
+                  {activeTab === 'categorized' && (
+                    <AuditCategorizedTable entries={auditEntries} />
+                  )}
+                </div>
+              )}
+              
+              {/* Table Panel */}
               <div className={`transition-all duration-300 ease-in-out ${
                 activeTab === 'table' ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 absolute inset-0 pointer-events-none'
               }`}>
                 {activeTab === 'table' && (
-                  <LogTable logs={logs} />
+                  appMode === 'logs' ? (
+                    <LogTable logs={logs} />
+                  ) : (
+                    <AuditCategorizedTable entries={auditEntries} />
+                  )
                 )}
               </div>
 
-              {/* Report Panel - PDF generation with customization options */}
-              <div className={`transition-all duration-300 ease-in-out ${
-                activeTab === 'report' ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 absolute inset-0 pointer-events-none'
-              }`}>
-                {activeTab === 'report' && summary && (
-                  <ReportGenerator 
-                    logs={logs} 
-                    summary={summary} 
-                    filename={filename}
-                    addedContent={addedReportContent}
-                    onRemoveContent={handleRemoveFromReport}
-                  />
-                )}
-              </div>
+              {/* Report Panel (Log Analysis Only) */}
+              {appMode === 'logs' && (
+                <div className={`transition-all duration-300 ease-in-out ${
+                  activeTab === 'report' ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 absolute inset-0 pointer-events-none'
+                }`}>
+                  {activeTab === 'report' && logSummary && (
+                    <ReportGenerator 
+                      logs={logs} 
+                      summary={logSummary} 
+                      filename={filename}
+                      addedContent={addedReportContent}
+                      onRemoveContent={handleRemoveFromReport}
+                    />
+                  )}
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -442,7 +544,7 @@ function App() {
               <div>
                 <h4 className="text-sm font-medium text-green-800 dark:text-green-300">Privacy Protected</h4>
                 <p className="text-sm text-green-700 dark:text-green-400 mt-1">
-                  Log content is processed locally and never stored in the database. 
+                  {appMode === 'logs' ? 'Log' : 'Audit trail'} content is processed locally and never stored in the database. 
                   Only analysis metadata (timestamps, counts) is saved for session tracking.
                   No data caching ensures fresh processing and maximum security.
                 </p>
@@ -450,36 +552,52 @@ function App() {
             </div>
           </div>
 
-          {/* AI Usage Transparency Notice */}
-          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 transition-colors duration-200">
-            <div className="flex items-start space-x-2">
-              <Bot className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
-              <div>
-                <h4 className="text-sm font-medium text-blue-800 dark:text-blue-300">AI Usage Notice</h4>
-                <p className="text-sm text-blue-700 dark:text-blue-400 mt-1">
-                  <strong>Limited AI Integration:</strong> Only the optional AI chatbot assistant uses artificial intelligence (Google Gemini). 
-                  All core log analysis features (parsing, statistics, charts, and reports) are processed locally without AI. 
-                  The AI assistant only receives summary statistics, never actual log content.
-                </p>
+          {/* AI Usage Transparency Notice (Log Analysis Only) */}
+          {appMode === 'logs' && (
+            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 transition-colors duration-200">
+              <div className="flex items-start space-x-2">
+                <Bot className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+                <div>
+                  <h4 className="text-sm font-medium text-blue-800 dark:text-blue-300">AI Usage Notice</h4>
+                  <p className="text-sm text-blue-700 dark:text-blue-400 mt-1">
+                    <strong>Limited AI Integration:</strong> Only the optional AI chatbot assistant uses artificial intelligence (Google Gemini). 
+                    All core log analysis features (parsing, statistics, charts, and reports) are processed locally without AI. 
+                    The AI assistant only receives summary statistics, never actual log content.
+                  </p>
+                </div>
               </div>
             </div>
-          </div>
+          )}
+
+          {/* Audit Trail Security Notice */}
+          {appMode === 'audit' && (
+            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 transition-colors duration-200">
+              <div className="flex items-start space-x-2">
+                <FileSpreadsheet className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+                <div>
+                  <h4 className="text-sm font-medium text-blue-800 dark:text-blue-300">Audit Trail Security</h4>
+                  <p className="text-sm text-blue-700 dark:text-blue-400 mt-1">
+                    <strong>No AI Processing:</strong> Audit trail analysis is performed entirely with browser-side code. 
+                    No artificial intelligence processes your audit data. All parsing, categorization, and analysis 
+                    happens locally for maximum security and privacy of sensitive audit information.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
       {/* ========================================================================
-          AI ASSISTANT CHATBOT
+          AI ASSISTANT CHATBOT (LOG ANALYSIS ONLY)
           ======================================================================== */}
-      {/* 
-        Floating AI assistant that can provide additional insights
-        Only receives summary statistics, never actual log content
-        Can generate content that gets added to PDF reports
-      */}
-      <GeminiChatbot 
-        logs={logs} 
-        summary={summary}
-        onAddToReport={handleAddToReport}
-      />
+      {appMode === 'logs' && (
+        <GeminiChatbot 
+          logs={logs} 
+          summary={logSummary}
+          onAddToReport={handleAddToReport}
+        />
+      )}
     </div>
   );
 }
