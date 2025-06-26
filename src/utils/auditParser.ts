@@ -189,7 +189,7 @@ function parseAuditDataRow(row: string, headers: string[], index: number): Audit
     if (dateMatch) {
       const dateTime = dateMatch[1];
       const beforeDate = row.substring(0, row.indexOf(dateTime)).trim();
-      const afterDate = row.substring(row.indexOf(dateTime) + dateTime.length).trim();
+      let afterDate = row.substring(row.indexOf(dateTime) + dateTime.length).trim();
       
       // Split the before-date part more carefully
       const beforeParts = beforeDate.split(/\s+/);
