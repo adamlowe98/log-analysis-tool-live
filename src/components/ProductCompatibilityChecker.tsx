@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { MessageCircle, Send, X, Minimize2, Bot, User, Package, Loader2 } from 'lucide-react';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { getProductDocumentation, ProductDocumentation } from '../lib/supabase';
 
 interface Message {
   id: string;
@@ -9,14 +10,8 @@ interface Message {
   timestamp: Date;
 }
 
-const DOCUMENTATION_URLS = [
-  'https://docs.bentley.com/LiveContent/web/ProjectWise%20Version%20Support%20Matrix-vlatest/Guide/en/topics/2809885/c-PW-VSM_2025.html',
-  'https://docs.bentley.com/LiveContent/web/ProjectWise%20Version%20Support%20Matrix-vlatest/Guide/en/topics/2809885/c-PW-VSM_2024.html',
-  'https://docs.bentley.com/LiveContent/web/ProjectWise%20Version%20Support%20Matrix-vlatest/Guide/en/topics/2809885/c-PW-VSM_2023.html',
-  'https://docs.bentley.com/LiveContent/web/ProjectWise%20Version%20Support%20Matrix-vlatest/Guide/en/topics/2809885/GUID-2FD73349-D765-45FF-87C2-3FBA66493576.html',
-];
-
 export function ProductCompatibilityChecker() {
+  const [documentation, setDocumentation] = useState<ProductDocumentation[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
@@ -31,6 +26,19 @@ export function ProductCompatibilityChecker() {
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    loadDocumentation();
+  }, []);
+
+  const loadDocumentation = async () => {
+    try {
+      const docs = await getProductDocumentation();
+      setDocumentation(docs);
+    } catch (error) {
+      console.error('Failed to load documentation:', error);
+    }
+  };
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -47,30 +55,39 @@ export function ProductCompatibilityChecker() {
   }, [isOpen, isMinimized]);
 
   const generatePrompt = (userMessage: string) => {
-    const context = `You are a ProjectWise Product Compatibility expert assistant. Your role is to help users understand version compatibility, supported products, and system requirements for ProjectWise.
+    let context = `You are a ProjectWise Product Compatibility expert assistant. Your role is to help users understand version compatibility, supported products, and system requirements for ProjectWise.
 
-You have access to information from the following ProjectWise Version Support Matrix documentation pages:
-${DOCUMENTATION_URLS.join('\n')}
+`;
 
-These pages contain detailed information about:
-- Supported database versions (SQL Server, Oracle, PostgreSQL)
-- Operating system compatibility (Windows Server, Windows client)
-- Browser requirements for ProjectWise Web
-- Microsoft Office integration support
-- .NET Framework requirements
-- Other infrastructure and software compatibility information
+    if (documentation.length > 0) {
+      context += `You have access to the following ProjectWise Version Support Matrix documentation:\n\n`;
 
-When answering questions:
-1. Provide specific version numbers and compatibility details
-2. Reference which ProjectWise version year (2023, 2024, 2025) you're discussing
-3. Highlight any important notes about support lifecycles or deprecations
-4. If you're not certain about specific details, acknowledge that and provide general guidance
-5. Be clear and concise in your responses
-6. Format responses with bullet points and clear sections when appropriate
+      documentation.forEach(doc => {
+        context += `--- ${doc.title} ${doc.year ? `(${doc.year})` : ''} ---\n`;
+        context += `${doc.content}\n\n`;
+      });
 
-User Question: ${userMessage}
+      context += `\nBased on this documentation, answer the user's question with specific details.\n`;
+    } else {
+      context += `Note: Documentation is being loaded. Provide general guidance about ProjectWise version support based on common knowledge.\n\n`;
+      context += `General topics include:\n`;
+      context += `- Supported database versions (SQL Server, Oracle, PostgreSQL)\n`;
+      context += `- Operating system compatibility (Windows Server, Windows client)\n`;
+      context += `- Browser requirements for ProjectWise Web\n`;
+      context += `- Microsoft Office integration support\n`;
+      context += `- .NET Framework requirements\n`;
+    }
 
-Please provide a helpful, accurate response based on ProjectWise version support information.`;
+    context += `\nWhen answering questions:\n`;
+    context += `1. Provide specific version numbers and compatibility details when available\n`;
+    context += `2. Reference which ProjectWise version year you're discussing\n`;
+    context += `3. Highlight any important notes about support lifecycles or deprecations\n`;
+    context += `4. If you're not certain about specific details, acknowledge that\n`;
+    context += `5. Be clear and concise in your responses\n`;
+    context += `6. Format responses with bullet points and clear sections\n\n`;
+
+    context += `User Question: ${userMessage}\n\n`;
+    context += `Please provide a helpful, accurate response based on the documentation provided.`;
 
     return context;
   };

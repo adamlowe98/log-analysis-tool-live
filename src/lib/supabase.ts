@@ -135,10 +135,10 @@ export async function saveAnalysisSession(data: Omit<AnalysisSession, 'id' | 'cr
 
 /**
  * Retrieve recent analysis sessions
- * 
+ *
  * Fetches recent analysis sessions for usage analytics and history tracking.
  * Used for understanding tool usage patterns and system performance.
- * 
+ *
  * @param limit - Maximum number of sessions to retrieve (default: 10)
  * @returns Promise resolving to array of recent sessions
  */
@@ -164,6 +164,66 @@ export async function getRecentAnalysisSessions(limit = 10) {
     return sessions || [];
   } catch (error) {
     console.error('Database query failed:', error);
+    throw error;
+  }
+}
+
+export interface ProductDocumentation {
+  id: string;
+  title: string;
+  url: string;
+  content: string;
+  year: number | null;
+  category: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export async function getProductDocumentation() {
+  if (!supabase) {
+    console.warn('Supabase not configured. Returning empty documentation.');
+    return [];
+  }
+
+  try {
+    const { data: docs, error } = await supabase
+      .from('product_documentation')
+      .select('*')
+      .order('year', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching product documentation:', error);
+      throw error;
+    }
+
+    return docs || [];
+  } catch (error) {
+    console.error('Database query failed:', error);
+    throw error;
+  }
+}
+
+export async function saveProductDocumentation(data: Omit<ProductDocumentation, 'id' | 'created_at' | 'updated_at'>) {
+  if (!supabase) {
+    console.warn('Supabase not configured. Documentation not saved.');
+    return null;
+  }
+
+  try {
+    const { data: doc, error } = await supabase
+      .from('product_documentation')
+      .insert([data])
+      .select()
+      .maybeSingle();
+
+    if (error) {
+      console.error('Error saving product documentation:', error);
+      throw error;
+    }
+
+    return doc;
+  } catch (error) {
+    console.error('Database operation failed:', error);
     throw error;
   }
 }
