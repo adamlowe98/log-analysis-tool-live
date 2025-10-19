@@ -111,7 +111,7 @@ export function GeminiChatbot({ logs = [], summary, onAddToReport }: GeminiChatb
 
     try {
       const genAI = new GoogleGenerativeAI(apiKey);
-      const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+      const model = genAI.getGenerativeModel({ model: "models/gemini-1.5-flash" });
 
       const prompt = generateContextualPrompt(inputValue);
       const result = await model.generateContent(prompt);
