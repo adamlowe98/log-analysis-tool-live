@@ -1,7 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { MessageCircle, Send, X, Minimize2, Bot, User, Package, Loader2 } from 'lucide-react';
-import { GoogleGenerativeAI } from '@google/generative-ai';
-import { getProductDocumentation, ProductDocumentation } from '../lib/supabase';
+import { Package, Send, X, Minimize2, User, Loader2 } from 'lucide-react';
 
 interface Message {
   id: string;
@@ -10,14 +8,24 @@ interface Message {
   timestamp: Date;
 }
 
+const DOCUMENTATION_CONTEXT = `You are a ProjectWise Product Compatibility expert assistant. Answer questions based on general knowledge about ProjectWise version support matrices.
+
+Common topics include:
+- SQL Server, Oracle, and PostgreSQL database compatibility
+- Windows Server and client OS requirements
+- Browser requirements for ProjectWise Web
+- Microsoft Office integration
+- .NET Framework requirements
+
+Provide helpful, accurate responses about ProjectWise version compatibility. If you're unsure about specific version details, provide general guidance.`;
+
 export function ProductCompatibilityChecker() {
-  const [documentation, setDocumentation] = useState<ProductDocumentation[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
-      content: "Hi! I'm the Product Compatibility Checker assistant. I can help you find information about ProjectWise version support, compatibility matrices, and product versions.\n\nI have access to ProjectWise Version Support Matrix documentation for 2023, 2024, and 2025.\n\nAsk me questions like:\n• What versions of SQL Server are supported with ProjectWise 2025?\n• Is Oracle 19c compatible with ProjectWise 2024?\n• What operating systems support ProjectWise 2023?\n• What are the browser requirements for ProjectWise Web?\n\nWhat would you like to know?",
+      content: "Hi! I can help you with ProjectWise version support and compatibility questions.\n\nAsk me about:\n• Database compatibility (SQL Server, Oracle, PostgreSQL)\n• Operating system requirements\n• Browser support for ProjectWise Web\n• Microsoft Office integration\n\nNote: Responses are based on general ProjectWise knowledge. For specific version details, please refer to official Bentley documentation.\n\nWhat would you like to know?",
       isUser: false,
       timestamp: new Date(),
     }
@@ -26,19 +34,6 @@ export function ProductCompatibilityChecker() {
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    loadDocumentation();
-  }, []);
-
-  const loadDocumentation = async () => {
-    try {
-      const docs = await getProductDocumentation();
-      setDocumentation(docs);
-    } catch (error) {
-      console.error('Failed to load documentation:', error);
-    }
-  };
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -54,58 +49,8 @@ export function ProductCompatibilityChecker() {
     }
   }, [isOpen, isMinimized]);
 
-  const generatePrompt = (userMessage: string) => {
-    let context = `You are a ProjectWise Product Compatibility expert assistant. Your role is to help users understand version compatibility, supported products, and system requirements for ProjectWise.
-
-`;
-
-    if (documentation.length > 0) {
-      context += `You have access to the following ProjectWise Version Support Matrix documentation:\n\n`;
-
-      documentation.forEach(doc => {
-        context += `--- ${doc.title} ${doc.year ? `(${doc.year})` : ''} ---\n`;
-        context += `${doc.content}\n\n`;
-      });
-
-      context += `\nBased on this documentation, answer the user's question with specific details.\n`;
-    } else {
-      context += `Note: Documentation is being loaded. Provide general guidance about ProjectWise version support based on common knowledge.\n\n`;
-      context += `General topics include:\n`;
-      context += `- Supported database versions (SQL Server, Oracle, PostgreSQL)\n`;
-      context += `- Operating system compatibility (Windows Server, Windows client)\n`;
-      context += `- Browser requirements for ProjectWise Web\n`;
-      context += `- Microsoft Office integration support\n`;
-      context += `- .NET Framework requirements\n`;
-    }
-
-    context += `\nWhen answering questions:\n`;
-    context += `1. Provide specific version numbers and compatibility details when available\n`;
-    context += `2. Reference which ProjectWise version year you're discussing\n`;
-    context += `3. Highlight any important notes about support lifecycles or deprecations\n`;
-    context += `4. If you're not certain about specific details, acknowledge that\n`;
-    context += `5. Be clear and concise in your responses\n`;
-    context += `6. Format responses with bullet points and clear sections\n\n`;
-
-    context += `User Question: ${userMessage}\n\n`;
-    context += `Please provide a helpful, accurate response based on the documentation provided.`;
-
-    return context;
-  };
-
   const sendMessage = async () => {
     if (!inputValue.trim() || isLoading) return;
-
-    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-    if (!apiKey || apiKey === 'your_api_key_here') {
-      const errorMessage: Message = {
-        id: Date.now().toString(),
-        content: "Please configure the Google Gemini API key in the .env file to use the Product Compatibility Checker.",
-        isUser: false,
-        timestamp: new Date(),
-      };
-      setMessages(prev => [...prev, errorMessage]);
-      return;
-    }
 
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -119,27 +64,34 @@ export function ProductCompatibilityChecker() {
     setIsLoading(true);
 
     try {
-      const genAI = new GoogleGenerativeAI(apiKey);
-      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+      const response = await fetch('/api/compatibility-chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: inputValue,
+          context: DOCUMENTATION_CONTEXT,
+        }),
+      });
 
-      const prompt = generatePrompt(inputValue);
-      const result = await model.generateContent(prompt);
-      const response = await result.response;
-      const text = response.text();
+      if (!response.ok) {
+        throw new Error('API request failed');
+      }
+
+      const data = await response.json();
 
       const aiMessage: Message = {
         id: (Date.now() + 1).toString(),
-        content: text,
+        content: data.response || 'Sorry, I could not process that request.',
         isUser: false,
         timestamp: new Date(),
       };
 
       setMessages(prev => [...prev, aiMessage]);
     } catch (error) {
-      console.error('Error calling Gemini API:', error);
+      console.error('Error:', error);
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
-        content: "Sorry, an error was encountered while processing the request. Please check the API key and try again.",
+        content: "I'm currently unavailable. Please refer to the official Bentley ProjectWise documentation for version support information.",
         isUser: false,
         timestamp: new Date(),
       };
@@ -153,7 +105,7 @@ export function ProductCompatibilityChecker() {
     setMessages([
       {
         id: '1',
-        content: "Hi! I'm the Product Compatibility Checker assistant. I can help you find information about ProjectWise version support, compatibility matrices, and product versions.\n\nI have access to ProjectWise Version Support Matrix documentation for 2023, 2024, and 2025.\n\nAsk me questions like:\n• What versions of SQL Server are supported with ProjectWise 2025?\n• Is Oracle 19c compatible with ProjectWise 2024?\n• What operating systems support ProjectWise 2023?\n• What are the browser requirements for ProjectWise Web?\n\nWhat would you like to know?",
+        content: "Hi! I can help you with ProjectWise version support and compatibility questions.\n\nAsk me about:\n• Database compatibility (SQL Server, Oracle, PostgreSQL)\n• Operating system requirements\n• Browser support for ProjectWise Web\n• Microsoft Office integration\n\nNote: Responses are based on general ProjectWise knowledge. For specific version details, please refer to official Bentley documentation.\n\nWhat would you like to know?",
         isUser: false,
         timestamp: new Date(),
       }
@@ -314,7 +266,7 @@ export function ProductCompatibilityChecker() {
 
             <div className="mt-2">
               <div className="text-xs text-gray-500 dark:text-gray-400">
-                Ask about ProjectWise version support, database compatibility, OS requirements, and more
+                General ProjectWise compatibility guidance
               </div>
             </div>
           </div>

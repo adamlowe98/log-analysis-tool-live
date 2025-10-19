@@ -13,13 +13,12 @@ import { AuditSummary } from './components/AuditSummary';
 import { AuditCategorizedTable } from './components/AuditCategorizedTable';
 import { AuditTable } from './components/AuditTable';
 import { ProductCompatibilityChecker } from './components/ProductCompatibilityChecker';
-import { DocumentationManager } from './components/DocumentationManager';
 import { parseLogFile, generateLogSummary } from './utils/logParser';
 import { parseAuditTrailCSV, generateAuditSummary } from './utils/auditParser';
 import { LogEntry, LogSummary as LogSummaryType } from './types/log';
 import { AuditEntry, AuditSummary as AuditSummaryType } from './types/audit';
 import { saveAnalysisSession } from './lib/supabase';
-import { BarChart3, FileText, TrendingUp, RotateCcw, FileDown, Bot, Shield, Activity, BookOpen, FileSpreadsheet, Table, Database } from 'lucide-react';
+import { BarChart3, FileText, TrendingUp, RotateCcw, FileDown, Bot, Shield, Activity, BookOpen, FileSpreadsheet, Table } from 'lucide-react';
 
 /**
  * Interface for additional content that can be added to reports
@@ -76,12 +75,6 @@ function App() {
    * Controls whether the developer documentation is shown
    */
   const [showKnowledgeBase, setShowKnowledgeBase] = useState(false);
-
-  /**
-   * Documentation manager visibility state
-   * Controls whether the documentation manager is shown
-   */
-  const [showDocManager, setShowDocManager] = useState(false);
   
   // LOG ANALYSIS STATE
   /**
@@ -302,11 +295,6 @@ function App() {
     return <KnowledgeBase onClose={() => setShowKnowledgeBase(false)} />;
   }
 
-  // Show documentation manager if requested
-  if (showDocManager) {
-    return <DocumentationManager onClose={() => setShowDocManager(false)} />;
-  }
-
   // ============================================================================
   // TAB CONFIGURATION BASED ON MODE
   // ============================================================================
@@ -412,16 +400,6 @@ function App() {
                 </button>
               </div>
               
-              {/* Documentation Manager access button */}
-              <button
-                onClick={() => setShowDocManager(true)}
-                className="flex items-center space-x-2 px-4 py-2 bg-green-600 dark:bg-green-500 text-white rounded-lg hover:bg-green-700 dark:hover:bg-green-600 transition-colors duration-200"
-                title="Manage product documentation"
-              >
-                <Database className="h-4 w-4" />
-                <span>Manage Docs</span>
-              </button>
-
               {/* Knowledge Base access button */}
               <button
                 onClick={() => setShowKnowledgeBase(true)}
