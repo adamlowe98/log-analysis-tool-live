@@ -93,12 +93,38 @@ export function ProductCompatibilityChecker() {
     setIsLoading(true);
 
     try {
-      const { data: docs, error: dbError } = await supabase
-        .from('product_documentation')
-        .select('*')
-        .order('year', { ascending: false });
+      const [docsResult, glossaryResult] = await Promise.all([
+        supabase
+          .from('product_documentation')
+          .select('*')
+          .order('year', { ascending: false }),
+        supabase
+          .from('projectwise_glossary')
+          .select('*')
+          .order('abbreviation', { ascending: true })
+      ]);
+
+      const docs = docsResult.data;
+      const glossary = glossaryResult.data;
 
       let contextWithDocs = DOCUMENTATION_CONTEXT;
+
+      if (glossary && glossary.length > 0) {
+        contextWithDocs += "\n\n=== PROJECTWISE TERMINOLOGY & ABBREVIATIONS ===\n";
+        contextWithDocs += "Use this glossary to understand abbreviations and alternative names in user questions:\n\n";
+
+        for (const term of glossary) {
+          contextWithDocs += `- ${term.abbreviation} = ${term.full_term}`;
+          if (term.aliases && term.aliases.length > 0) {
+            contextWithDocs += ` (Also known as: ${term.aliases.join(', ')})`;
+          }
+          if (term.description) {
+            contextWithDocs += ` - ${term.description}`;
+          }
+          contextWithDocs += "\n";
+        }
+        contextWithDocs += "\n=== END GLOSSARY ===\n";
+      }
 
       if (docs && docs.length > 0) {
         contextWithDocs += "\n\n=== OFFICIAL BENTLEY DOCUMENTATION ===\n";
