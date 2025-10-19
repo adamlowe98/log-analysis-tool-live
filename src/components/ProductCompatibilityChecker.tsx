@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Package, Send, X, Minimize2, User, Loader2 } from 'lucide-react';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { supabase } from '../lib/supabase';
 
 interface Message {
   id: string;
@@ -92,10 +93,34 @@ export function ProductCompatibilityChecker() {
     setIsLoading(true);
 
     try {
+      const { data: docs, error: dbError } = await supabase
+        .from('product_documentation')
+        .select('*')
+        .order('year', { ascending: false });
+
+      let contextWithDocs = DOCUMENTATION_CONTEXT;
+
+      if (docs && docs.length > 0) {
+        contextWithDocs += "\n\n=== OFFICIAL BENTLEY DOCUMENTATION ===\n";
+        contextWithDocs += "You have access to the following official Bentley documentation. Use this information to answer questions:\n\n";
+
+        for (const doc of docs) {
+          contextWithDocs += `\n--- ${doc.title} (${doc.year}) ---\n`;
+          contextWithDocs += `Source: ${doc.url}\n`;
+          contextWithDocs += `Content:\n${doc.content}\n`;
+          contextWithDocs += "\n---\n";
+        }
+
+        contextWithDocs += "\n=== END DOCUMENTATION ===\n";
+        contextWithDocs += "\nIMPORTANT: Base your answer ONLY on the documentation provided above. If the answer is in the documentation, provide specific version numbers and compatibility details. If the information is not in the documentation above, clearly state that you don't have this specific information in the knowledge base.";
+      } else {
+        contextWithDocs += "\n\nNOTE: No documentation has been loaded into the knowledge base yet. You should inform the user that documentation needs to be added for specific version information.";
+      }
+
       const genAI = new GoogleGenerativeAI(apiKey);
       const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
-      const prompt = `${DOCUMENTATION_CONTEXT}\n\nUser question: ${inputValue}\n\nProvide a specific, structured answer with exact version numbers. If you don't have the specific information, clearly state that and recommend checking official Bentley documentation.`;
+      const prompt = `${contextWithDocs}\n\nUser question: ${inputValue}\n\nProvide a specific, structured answer with exact version numbers based on the documentation provided. If the information is not in the documentation, clearly state that.`;
 
       const result = await model.generateContent(prompt);
       const response = await result.response;
