@@ -12,6 +12,7 @@ import { AuditFileUpload } from './components/AuditFileUpload';
 import { AuditSummary } from './components/AuditSummary';
 import { AuditCategorizedTable } from './components/AuditCategorizedTable';
 import { AuditTable } from './components/AuditTable';
+import { ProductCompatibilityChecker } from './components/ProductCompatibilityChecker';
 import { parseLogFile, generateLogSummary } from './utils/logParser';
 import { parseAuditTrailCSV, generateAuditSummary } from './utils/auditParser';
 import { LogEntry, LogSummary as LogSummaryType } from './types/log';
@@ -644,12 +645,17 @@ function App() {
           AI ASSISTANT CHATBOT (LOG ANALYSIS ONLY)
           ======================================================================== */}
       {appMode === 'logs' && (
-        <GeminiChatbot 
-          logs={logs} 
+        <GeminiChatbot
+          logs={logs}
           summary={logSummary}
           onAddToReport={handleAddToReport}
         />
       )}
+
+      {/* ========================================================================
+          PRODUCT COMPATIBILITY CHECKER (ALWAYS AVAILABLE)
+          ======================================================================== */}
+      <ProductCompatibilityChecker />
     </div>
   );
 }
