@@ -12,9 +12,17 @@ interface Message {
 
 const DOCUMENTATION_CONTEXT = `You are a ProjectWise Product Compatibility expert assistant with access to Bentley's official documentation.
 
+CRITICAL DEPLOYMENT MODEL INFORMATION:
+- ProjectWise 2024 and ProjectWise 2025 are CLOUD-BASED versions
+- ProjectWise 2023 and earlier versions are ON-PREMISE versions
+- Cloud versions (2024, 2025) do NOT use databases like SQL Server, Oracle, or PostgreSQL - they are hosted by Bentley
+- On-premise versions (2023 and earlier) require database installations (SQL Server, Oracle, PostgreSQL)
+- If a user asks about database compatibility for 2024 or 2025, inform them these are cloud-based and do not require database setup
+
 CRITICAL INSTRUCTIONS:
 - Provide ONLY specific version numbers and compatibility information
 - Format responses as concise lists with exact version numbers
+- Use proper line breaks (\n) to ensure readability - NEVER create overly long single lines
 - If you don't have specific information, clearly state "I don't have specific version information for this. Please check the official Bentley documentation at [relevant URL]"
 - Do NOT provide vague or generic answers
 - Do NOT make up version numbers if you're unsure
@@ -29,12 +37,12 @@ Example bad response format:
 "ProjectWise Administrator 2025 works with various versions of PWDI. You'll want to make sure you have a recent version that supports the features you need..."
 
 Common topics include:
-- SQL Server, Oracle, and PostgreSQL database compatibility
 - Windows Server and client OS requirements
 - Browser requirements for ProjectWise Web
 - Microsoft Office integration
 - .NET Framework requirements
-- PWDI (ProjectWise Drive Integration) version compatibility`;
+- PWDI (ProjectWise Design Integration) version compatibility
+- Database compatibility (ONLY for 2023 and earlier - SQL Server, Oracle, PostgreSQL)`;
 
 export function ProductCompatibilityChecker() {
   const [isOpen, setIsOpen] = useState(false);
@@ -42,7 +50,7 @@ export function ProductCompatibilityChecker() {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
-      content: "Hi! I can help you with ProjectWise version support and compatibility questions.\n\nAsk me about:\n• PWDI (ProjectWise Drive Integration) version compatibility\n• Database compatibility (SQL Server, Oracle, PostgreSQL)\n• Operating system requirements\n• Browser support for ProjectWise Web\n• Microsoft Office integration\n\nI'll provide specific version numbers when available. For the most current information, always verify with official Bentley documentation.\n\nWhat would you like to know?",
+      content: "Hi! I can help you with ProjectWise version support and compatibility questions.\n\nAsk me about:\n• PWDI (ProjectWise Design Integration) version compatibility\n• Database compatibility (SQL Server, Oracle, PostgreSQL) - for 2023 and earlier\n• Operating system requirements\n• Browser support for ProjectWise Web\n• Microsoft Office integration\n\n📌 Note: ProjectWise 2024 and 2025 are cloud-based and don't require database setup\n\nI'll provide specific version numbers when available. For the most current information, always verify with official Bentley documentation.\n\nWhat would you like to know?",
       isUser: false,
       timestamp: new Date(),
     }
@@ -178,7 +186,7 @@ export function ProductCompatibilityChecker() {
     setMessages([
       {
         id: '1',
-        content: "Hi! I can help you with ProjectWise version support and compatibility questions.\n\nAsk me about:\n• PWDI (ProjectWise Drive Integration) version compatibility\n• Database compatibility (SQL Server, Oracle, PostgreSQL)\n• Operating system requirements\n• Browser support for ProjectWise Web\n• Microsoft Office integration\n\nI'll provide specific version numbers when available. For the most current information, always verify with official Bentley documentation.\n\nWhat would you like to know?",
+        content: "Hi! I can help you with ProjectWise version support and compatibility questions.\n\nAsk me about:\n• PWDI (ProjectWise Design Integration) version compatibility\n• Database compatibility (SQL Server, Oracle, PostgreSQL) - for 2023 and earlier\n• Operating system requirements\n• Browser support for ProjectWise Web\n• Microsoft Office integration\n\n📌 Note: ProjectWise 2024 and 2025 are cloud-based and don't require database setup\n\nI'll provide specific version numbers when available. For the most current information, always verify with official Bentley documentation.\n\nWhat would you like to know?",
         isUser: false,
         timestamp: new Date(),
       }
@@ -277,12 +285,12 @@ export function ProductCompatibilityChecker() {
                       <Package className="h-3 w-3 text-gray-600 dark:text-gray-300" />
                     )}
                   </div>
-                  <div className={`rounded-lg px-3 py-2 ${
+                  <div className={`rounded-lg px-3 py-2 break-words ${
                     message.isUser
                       ? 'bg-green-600 dark:bg-green-500 text-white'
                       : 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100'
                   }`}>
-                    <p className="text-sm whitespace-pre-wrap leading-relaxed">{message.content}</p>
+                    <p className="text-sm whitespace-pre-wrap leading-relaxed break-words overflow-wrap-anywhere">{message.content}</p>
                     <p className={`text-xs mt-1 ${
                       message.isUser ? 'text-green-100' : 'text-gray-500 dark:text-gray-400'
                     }`}>
