@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Package, Send, X, Minimize2, User, Loader2 } from 'lucide-react';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
 interface Message {
   id: string;
@@ -52,6 +53,18 @@ export function ProductCompatibilityChecker() {
   const sendMessage = async () => {
     if (!inputValue.trim() || isLoading) return;
 
+    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+    if (!apiKey || apiKey === 'your_api_key_here') {
+      const errorMessage: Message = {
+        id: Date.now().toString(),
+        content: "Please configure the Google Gemini API key in the .env file to use the Product Compatibility assistant.",
+        isUser: false,
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, errorMessage]);
+      return;
+    }
+
     const userMessage: Message = {
       id: Date.now().toString(),
       content: inputValue,
@@ -64,34 +77,28 @@ export function ProductCompatibilityChecker() {
     setIsLoading(true);
 
     try {
-      const response = await fetch('/api/compatibility-chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message: inputValue,
-          context: DOCUMENTATION_CONTEXT,
-        }),
-      });
+      const genAI = new GoogleGenerativeAI(apiKey);
+      const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
-      if (!response.ok) {
-        throw new Error('API request failed');
-      }
+      const prompt = `${DOCUMENTATION_CONTEXT}\n\nUser question: ${inputValue}\n\nPlease provide a helpful, accurate response about ProjectWise version compatibility.`;
 
-      const data = await response.json();
+      const result = await model.generateContent(prompt);
+      const response = await result.response;
+      const text = response.text();
 
       const aiMessage: Message = {
         id: (Date.now() + 1).toString(),
-        content: data.response || 'Sorry, I could not process that request.',
+        content: text,
         isUser: false,
         timestamp: new Date(),
       };
 
       setMessages(prev => [...prev, aiMessage]);
     } catch (error) {
-      console.error('Error:', error);
+      console.error('Error calling Gemini API:', error);
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
-        content: "I'm currently unavailable. Please refer to the official Bentley ProjectWise documentation for version support information.",
+        content: "Sorry, an error was encountered while processing the request. Please check the API key and try again.",
         isUser: false,
         timestamp: new Date(),
       };
