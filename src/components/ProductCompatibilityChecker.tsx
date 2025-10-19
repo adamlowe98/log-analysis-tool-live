@@ -9,7 +9,23 @@ interface Message {
   timestamp: Date;
 }
 
-const DOCUMENTATION_CONTEXT = `You are a ProjectWise Product Compatibility expert assistant. Answer questions based on general knowledge about ProjectWise version support matrices.
+const DOCUMENTATION_CONTEXT = `You are a ProjectWise Product Compatibility expert assistant with access to Bentley's official documentation.
+
+CRITICAL INSTRUCTIONS:
+- Provide ONLY specific version numbers and compatibility information
+- Format responses as concise lists with exact version numbers
+- If you don't have specific information, clearly state "I don't have specific version information for this. Please check the official Bentley documentation at [relevant URL]"
+- Do NOT provide vague or generic answers
+- Do NOT make up version numbers if you're unsure
+
+Example good response format:
+"ProjectWise Administrator 2025 is compatible with:
+- PWDI 10.14.0.0 and later
+- PWDI 10.13.0.5 and later
+- PWDI 10.12.0.8 and later"
+
+Example bad response format:
+"ProjectWise Administrator 2025 works with various versions of PWDI. You'll want to make sure you have a recent version that supports the features you need..."
 
 Common topics include:
 - SQL Server, Oracle, and PostgreSQL database compatibility
@@ -17,8 +33,7 @@ Common topics include:
 - Browser requirements for ProjectWise Web
 - Microsoft Office integration
 - .NET Framework requirements
-
-Provide helpful, accurate responses about ProjectWise version compatibility. If you're unsure about specific version details, provide general guidance.`;
+- PWDI (ProjectWise Drive Integration) version compatibility`;
 
 export function ProductCompatibilityChecker() {
   const [isOpen, setIsOpen] = useState(false);
@@ -26,7 +41,7 @@ export function ProductCompatibilityChecker() {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
-      content: "Hi! I can help you with ProjectWise version support and compatibility questions.\n\nAsk me about:\n• Database compatibility (SQL Server, Oracle, PostgreSQL)\n• Operating system requirements\n• Browser support for ProjectWise Web\n• Microsoft Office integration\n\nNote: Responses are based on general ProjectWise knowledge. For specific version details, please refer to official Bentley documentation.\n\nWhat would you like to know?",
+      content: "Hi! I can help you with ProjectWise version support and compatibility questions.\n\nAsk me about:\n• PWDI (ProjectWise Drive Integration) version compatibility\n• Database compatibility (SQL Server, Oracle, PostgreSQL)\n• Operating system requirements\n• Browser support for ProjectWise Web\n• Microsoft Office integration\n\nI'll provide specific version numbers when available. For the most current information, always verify with official Bentley documentation.\n\nWhat would you like to know?",
       isUser: false,
       timestamp: new Date(),
     }
@@ -80,7 +95,7 @@ export function ProductCompatibilityChecker() {
       const genAI = new GoogleGenerativeAI(apiKey);
       const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
-      const prompt = `${DOCUMENTATION_CONTEXT}\n\nUser question: ${inputValue}\n\nPlease provide a helpful, accurate response about ProjectWise version compatibility.`;
+      const prompt = `${DOCUMENTATION_CONTEXT}\n\nUser question: ${inputValue}\n\nProvide a specific, structured answer with exact version numbers. If you don't have the specific information, clearly state that and recommend checking official Bentley documentation.`;
 
       const result = await model.generateContent(prompt);
       const response = await result.response;
@@ -112,7 +127,7 @@ export function ProductCompatibilityChecker() {
     setMessages([
       {
         id: '1',
-        content: "Hi! I can help you with ProjectWise version support and compatibility questions.\n\nAsk me about:\n• Database compatibility (SQL Server, Oracle, PostgreSQL)\n• Operating system requirements\n• Browser support for ProjectWise Web\n• Microsoft Office integration\n\nNote: Responses are based on general ProjectWise knowledge. For specific version details, please refer to official Bentley documentation.\n\nWhat would you like to know?",
+        content: "Hi! I can help you with ProjectWise version support and compatibility questions.\n\nAsk me about:\n• PWDI (ProjectWise Drive Integration) version compatibility\n• Database compatibility (SQL Server, Oracle, PostgreSQL)\n• Operating system requirements\n• Browser support for ProjectWise Web\n• Microsoft Office integration\n\nI'll provide specific version numbers when available. For the most current information, always verify with official Bentley documentation.\n\nWhat would you like to know?",
         isUser: false,
         timestamp: new Date(),
       }
