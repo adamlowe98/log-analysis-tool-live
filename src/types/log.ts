@@ -92,11 +92,23 @@ export interface LogSummary {
    */
   topErrors: { message: string; count: number }[];
   
-  /** 
+  /**
    * Time range covered by the log analysis
    * Based on valid timestamps found in the log entries
    */
   timeRange: { start: Date; end: Date };
+
+  /**
+   * Number of unique thread IDs found in the logs
+   * Helps understand concurrency and threading issues
+   */
+  uniqueThreadCount?: number;
+
+  /**
+   * Error trend data for charts
+   * Shows how errors distribute over time
+   */
+  errorTrend?: { timestamp: Date; count: number }[];
 }
 
 /**

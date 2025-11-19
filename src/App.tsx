@@ -12,7 +12,7 @@ import { AuditFileUpload } from './components/AuditFileUpload';
 import { AuditSummary } from './components/AuditSummary';
 import { AuditCategorizedTable } from './components/AuditCategorizedTable';
 import { AuditTable } from './components/AuditTable';
-import { parseLogFile, generateLogSummary } from './utils/logParser';
+import { parseLogFileHybrid } from './utils/hybridLogParser';
 import { parseAuditTrailCSV, generateAuditSummary } from './utils/auditParser';
 import { LogEntry, LogSummary as LogSummaryType } from './types/log';
 import { AuditEntry, AuditSummary as AuditSummaryType } from './types/audit';
@@ -179,10 +179,14 @@ function App() {
    */
   const handleLogFileUpload = async (content: string, fileName: string) => {
     try {
-      console.log('Starting log file processing...');
+      console.log('Starting AI-enhanced log file processing...');
 
-      const parsedLogs = parseLogFile(content);
-      const summary = generateLogSummary(parsedLogs);
+      const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+      if (!apiKey) {
+        throw new Error('Gemini API key not configured. Please add VITE_GEMINI_API_KEY to your .env file.');
+      }
+
+      const { entries: parsedLogs, summary } = await parseLogFileHybrid(content, apiKey);
 
       setLogs(parsedLogs);
       setLogSummary(summary);
@@ -205,7 +209,8 @@ function App() {
       }
     } catch (error) {
       console.error('Error parsing log file:', error);
-      alert('Failed to parse log file. Please check the console for details.');
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      alert(`Failed to parse log file: ${errorMessage}`);
     }
   };
 
@@ -362,7 +367,7 @@ function App() {
                 </h1>
                 <p className="text-sm text-gray-600 dark:text-gray-300">
                   {appMode === 'logs'
-                    ? 'Universal log analysis for all Bentley Systems teams'
+                    ? 'AI-powered universal log analysis with intelligent thread ID detection'
                     : 'Universal audit trail analysis for security and compliance'
                   }
                 </p>
