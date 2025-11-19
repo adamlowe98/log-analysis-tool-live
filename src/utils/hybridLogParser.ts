@@ -1,39 +1,71 @@
 import { LogEntry, LogSummary } from '../types/log';
-import { GoogleGenerativeAI } from '@google/generative-ai';
 
 /**
- * Hybrid Log Parser - Fast JavaScript with AI Enhancement
+ * Hybrid Log Parser - Fast JavaScript with OpenAI Enhancement
  *
- * This parser uses JavaScript for speed and structure, but leverages AI
+ * This parser uses JavaScript for speed and structure, but leverages OpenAI
  * to intelligently extract thread IDs and other fields that vary by format.
  */
 
 interface AIExtractionResult {
+  timestamp?: string;
   threadId?: string;
   level: string;
   message: string;
 }
 
 /**
+ * Call OpenAI API
+ */
+async function callOpenAI(apiKey: string, prompt: string): Promise<string> {
+  const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model: 'gpt-4o-mini',
+      messages: [
+        {
+          role: 'system',
+          content: 'You are a log file analysis expert. Respond only with valid JSON, no markdown formatting.'
+        },
+        {
+          role: 'user',
+          content: prompt
+        }
+      ],
+      temperature: 0.1,
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`OpenAI API error: ${response.status} - ${error}`);
+  }
+
+  const data = await response.json();
+  return data.choices[0].message.content;
+}
+
+/**
  * Parse log file using hybrid approach:
  * 1. Split into lines quickly with JavaScript
- * 2. Use AI to intelligently extract thread IDs and categorize each line
+ * 2. Use OpenAI to intelligently extract thread IDs and categorize each line
  * 3. Build structured entries
  */
 export async function parseLogFileHybrid(
   content: string,
   apiKey: string
 ): Promise<{ entries: LogEntry[]; summary: LogSummary }> {
-  const genAI = new GoogleGenerativeAI(apiKey);
-  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
-
   const lines = content.split('\n').filter(line => line.trim());
 
   if (lines.length === 0) {
     throw new Error('No content found in log file');
   }
 
-  console.log(`Processing ${lines.length} log lines with AI enhancement...`);
+  console.log(`Processing ${lines.length} log lines with OpenAI enhancement...`);
 
   // Sample first 50 lines to understand the format
   const sampleLines = lines.slice(0, Math.min(50, lines.length));
@@ -43,57 +75,49 @@ export async function parseLogFileHybrid(
 
 ${sampleText}
 
-Respond with a JSON object containing:
+Respond with ONLY a JSON object (no markdown, no code blocks) containing:
 {
-  "threadIdPattern": "description of where thread IDs appear (e.g., 'in square brackets after timestamp', 'not present', 'in parentheses')",
-  "timestampFormat": "format of timestamps (e.g., 'YYYY-MM-DD HH:mm:ss', 'MM-DD HH:mm:ss')",
-  "levelPosition": "where log level appears (e.g., 'after timestamp', 'in brackets', 'at start of message')",
-  "example": "one example line parsed showing: timestamp, threadId, level, message"
+  "threadIdPattern": "description of where thread IDs appear",
+  "timestampFormat": "format of timestamps",
+  "levelPosition": "where log level appears",
+  "example": "one example line parsed"
 }`;
 
-  const formatResult = await model.generateContent(formatPrompt);
-  const formatAnalysis = formatResult.response.text();
+  const formatAnalysis = await callOpenAI(apiKey, formatPrompt);
+  console.log('OpenAI Format Analysis:', formatAnalysis);
 
-  console.log('AI Format Analysis:', formatAnalysis);
-
-  // Now process all lines in batches using the understood format
+  // Now process all lines in batches
   const batchSize = 100;
   const entries: LogEntry[] = [];
 
   for (let i = 0; i < lines.length; i += batchSize) {
     const batch = lines.slice(i, Math.min(i + batchSize, lines.length));
-    const batchText = batch.join('\n');
+    const batchText = batch.map((line, idx) => `${i + idx}: ${line}`).join('\n');
 
     const extractPrompt = `Given this log format pattern:
 ${formatAnalysis}
 
-Extract structured data from these log lines. For each line, identify:
-- timestamp (exact text)
-- threadId (if present, extract it - this is CRITICAL)
+Extract structured data from these log lines. For EACH line, identify:
+- timestamp (exact text, or null if not present)
+- threadId (CRITICAL: extract any thread/process ID you find - look in brackets, parentheses, or after keywords)
 - level (ERROR, WARN, INFO, DEBUG, or infer from context)
 - message (the actual log message)
 
 Log lines:
 ${batchText}
 
-Respond with a JSON array where each object has: timestamp, threadId, level, message
-If a field is not present, use null. Keep messages concise but complete.
-IMPORTANT: Look carefully for thread IDs - they might be in brackets, parentheses, or after keywords like "Thread", "TID", etc.`;
+Respond with ONLY a JSON array (no markdown, no code blocks) where each object has: timestamp, threadId, level, message
+If a field is not present, use null. IMPORTANT: Look carefully for thread IDs in any format.`;
 
     try {
-      const result = await model.generateContent(extractPrompt);
-      const responseText = result.response.text();
+      const responseText = await callOpenAI(apiKey, extractPrompt);
 
-      // Extract JSON from markdown code blocks if present
-      let jsonText = responseText;
-      const jsonMatch = responseText.match(/```json\n([\s\S]*?)\n```/);
-      if (jsonMatch) {
-        jsonText = jsonMatch[1];
-      } else {
-        const codeMatch = responseText.match(/```\n([\s\S]*?)\n```/);
-        if (codeMatch) {
-          jsonText = codeMatch[1];
-        }
+      // Clean up response - remove markdown if present
+      let jsonText = responseText.trim();
+      if (jsonText.startsWith('```json')) {
+        jsonText = jsonText.replace(/```json\n?/g, '').replace(/```\n?/g, '');
+      } else if (jsonText.startsWith('```')) {
+        jsonText = jsonText.replace(/```\n?/g, '');
       }
 
       const extracted = JSON.parse(jsonText) as AIExtractionResult[];
@@ -101,7 +125,7 @@ IMPORTANT: Look carefully for thread IDs - they might be in brackets, parenthese
       // Convert AI extractions to LogEntry objects
       extracted.forEach((item, idx) => {
         const lineIndex = i + idx;
-        const rawLine = batch[idx];
+        const rawLine = batch[idx] || lines[lineIndex];
 
         entries.push({
           id: `log-${lineIndex}`,
@@ -210,6 +234,13 @@ function generateLogSummary(entries: LogEntry[]): LogSummary {
   const infoCount = entries.filter(e => e.level === 'INFO').length;
   const debugCount = entries.filter(e => e.level === 'DEBUG').length;
 
+  // Find critical errors
+  const criticalErrors = entries.filter(e =>
+    e.level === 'ERROR' ||
+    e.message.toLowerCase().includes('critical') ||
+    e.message.toLowerCase().includes('fatal')
+  ).slice(0, 10);
+
   // Find time range
   const validTimestamps = entries
     .map(e => e.timestamp)
@@ -223,6 +254,21 @@ function generateLogSummary(entries: LogEntry[]): LogSummary {
     end: new Date()
   };
 
+  // Count error patterns
+  const errorMessages = entries
+    .filter(e => e.level === 'ERROR')
+    .map(e => e.message.substring(0, 100));
+
+  const errorCounts = errorMessages.reduce((acc, msg) => {
+    acc[msg] = (acc[msg] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+
+  const topErrors = Object.entries(errorCounts)
+    .sort(([, a], [, b]) => b - a)
+    .slice(0, 10)
+    .map(([message, count]) => ({ message, count }));
+
   // Find unique thread IDs
   const uniqueThreads = new Set(entries.filter(e => e.threadId).map(e => e.threadId));
 
@@ -232,9 +278,10 @@ function generateLogSummary(entries: LogEntry[]): LogSummary {
     warningCount,
     infoCount,
     debugCount,
+    criticalErrors,
+    topErrors,
     timeRange,
-    topErrors: [],
-    errorTrend: [],
     uniqueThreadCount: uniqueThreads.size,
+    errorTrend: [],
   };
 }
