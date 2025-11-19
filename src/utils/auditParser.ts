@@ -325,14 +325,18 @@ function parseAuditDataRow(row: string, headers: string[], index: number): Audit
     .filter(part => part && part.trim())
     .join(' | ');
   
+  const category = categorizeAction(actionName.trim());
+
   const entry: AuditEntry = {
     id: `audit-${index}`,
     timestamp,
-    action: actionName.trim(),
     user: userName.trim(),
+    action: actionName.trim(),
+    resource: objectName.trim(),
+    details: detailParts.trim(),
+    category,
     document: objectName.trim(),
     folder: path.trim(),
-    details: detailParts.trim(),
     application: objectType.trim() || undefined,
     raw: row,
   };
@@ -390,37 +394,43 @@ function parseAuditTimestamp(str: string): Date | null {
 }
 
 /**
- * Categorize audit entry based on action type
- * 
- * Determines which investigation category an audit entry belongs to
- * based on the action performed.
- * 
- * @param entry - Audit entry to categorize
+ * Categorize action based on action type
+ *
+ * Determines which category an action belongs to.
+ *
+ * @param action - Action name
  * @returns Category classification
  */
-export function categorizeAuditEntry(entry: AuditEntry): AuditCategory {
-  const action = entry.action.toLowerCase();
-  const details = entry.details.toLowerCase();
-  
+function categorizeAction(action: string): AuditCategory {
+  const actionLower = action.toLowerCase();
+
+  // Missing file events
+  if (actionLower.includes('missing') || actionLower.includes('not found') || actionLower.includes('cannot find')) {
+    return 'file_missing';
+  }
+
   // Deletion events
-  if (action.includes('delete') || action.includes('purge') || action.includes('remove')) {
-    return 'deletion';
+  if (actionLower.includes('delete') || actionLower.includes('purge') || actionLower.includes('remove')) {
+    return 'file_deleted';
   }
-  
-  // Movement/relocation events
-  if (action.includes('move') || action.includes('export') || action.includes('copy') || 
-      action.includes('sent to') || action.includes('relocat')) {
-    return 'movement';
+
+  // File operations
+  if (actionLower.includes('create') || actionLower.includes('modify') || actionLower.includes('update') ||
+      actionLower.includes('move') || actionLower.includes('copy') || actionLower.includes('check') ||
+      actionLower.includes('free') || actionLower.includes('lock') || actionLower.includes('export')) {
+    return 'file_operations';
   }
-  
-  // Check-in/check-out events
-  if (action.includes('check') || action.includes('free') || action.includes('lock')) {
-    return 'checkinout';
+
+  // Security events
+  if (actionLower.includes('login') || actionLower.includes('logout') || actionLower.includes('auth') ||
+      actionLower.includes('permission') || actionLower.includes('access') || actionLower.includes('grant')) {
+    return 'security_events';
   }
-  
-  // Replacement/versioning events
-  if (action.includes('replace') || action.includes('version') || action.includes('overwrite')) {
-    return 'replacement';
+
+  // System events
+  if (actionLower.includes('start') || actionLower.includes('stop') || actionLower.includes('restart') ||
+      actionLower.includes('shutdown') || actionLower.includes('init')) {
+    return 'system_events';
   }
   
   return 'other';
@@ -510,64 +520,64 @@ export function categorizeAllEntries(entries: AuditEntry[]): CategorizedAuditEnt
  * @returns Comprehensive AuditSummary object
  */
 export function generateAuditSummary(entries: AuditEntry[]): AuditSummary {
-  // Categorize entries
-  const categorized = categorizeAllEntries(entries);
-  
-  // Identify key events
-  const keyEvents = identifyKeyEvents(entries);
-  
+  // Count by category
+  const fileMissingCount = entries.filter(e => e.category === 'file_missing').length;
+  const fileDeletedCount = entries.filter(e => e.category === 'file_deleted').length;
+  const fileOperationsCount = entries.filter(e => e.category === 'file_operations').length;
+  const securityEventsCount = entries.filter(e => e.category === 'security_events').length;
+  const systemEventsCount = entries.filter(e => e.category === 'system_events').length;
+
   // Calculate user activity
   const userActivity = entries.reduce((acc, entry) => {
     acc[entry.user] = (acc[entry.user] || 0) + 1;
     return acc;
   }, {} as Record<string, number>);
-  
-  const topUsers = Object.entries(userActivity)
+
+  const mostActiveUsers = Object.entries(userActivity)
     .sort(([, a], [, b]) => b - a)
     .slice(0, 10)
     .map(([user, count]) => ({ user, count }));
-  
-  // Calculate document activity
-  const documentActivity = entries
-    .filter(entry => entry.document)
+
+  // Calculate resource activity
+  const resourceActivity = entries
+    .filter(entry => entry.resource)
     .reduce((acc, entry) => {
-      acc[entry.document] = (acc[entry.document] || 0) + 1;
+      acc[entry.resource] = (acc[entry.resource] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
-  
-  const topDocuments = Object.entries(documentActivity)
+
+  const mostAffectedResources = Object.entries(resourceActivity)
     .sort(([, a], [, b]) => b - a)
     .slice(0, 10)
-    .map(([document, count]) => ({ document, count }));
-  
+    .map(([resource, count]) => ({ resource, count }));
+
   // Calculate time range
   const validTimestamps = entries
     .map(e => e.timestamp)
-    .filter((t): t is Date => 
-      t !== null && 
-      !isNaN(t.getTime()) && 
-      t.getFullYear() > 2020 && 
+    .filter((t): t is Date =>
+      t !== null &&
+      !isNaN(t.getTime()) &&
+      t.getFullYear() > 2020 &&
       t.getFullYear() < 2030
     );
 
   const timeRange = validTimestamps.length > 0 ? {
     start: new Date(Math.min(...validTimestamps.map(t => t.getTime()))),
     end: new Date(Math.max(...validTimestamps.map(t => t.getTime()))),
-  } : { 
-    start: new Date('2025-01-01'), 
-    end: new Date('2025-01-01') 
+  } : {
+    start: new Date('2025-01-01'),
+    end: new Date('2025-01-01')
   };
-  
+
   return {
     totalEntries: entries.length,
-    deletionCount: categorized.deletion.length,
-    movementCount: categorized.movement.length,
-    checkInOutCount: categorized.checkinout.length,
-    replacementCount: categorized.replacement.length,
-    otherCount: categorized.other.length,
-    keyEvents,
-    topUsers,
-    topDocuments,
+    fileMissingCount,
+    fileDeletedCount,
+    fileOperationsCount,
+    securityEventsCount,
+    systemEventsCount,
+    mostActiveUsers,
+    mostAffectedResources,
     timeRange,
   };
 }

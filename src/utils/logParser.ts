@@ -75,6 +75,7 @@ function parseLogLine(line: string, index: number): LogEntry | null {
   let level = 'INFO';
   let message = line;
   let source = '';
+  let threadId: string | undefined = undefined;
 
   // ============================================================================
   // TIMESTAMP EXTRACTION
@@ -130,21 +131,42 @@ function parseLogLine(line: string, index: number): LogEntry | null {
   }
 
   // ============================================================================
+  // THREAD ID EXTRACTION
+  // ============================================================================
+
+  // Try to extract thread ID from common patterns
+  const threadPatterns = [
+    /\[(\d+)\]/,  // [12345]
+    /thread[:\s]+(\d+)/i,  // thread: 12345 or thread 12345
+    /tid[:\s]+(\d+)/i,  // tid: 12345
+    /\((\d+)\)/,  // (12345)
+  ];
+
+  for (const pattern of threadPatterns) {
+    const match = message.match(pattern);
+    if (match && match[1] && match[1].length >= 3) {
+      threadId = match[1];
+      break;
+    }
+  }
+
+  // ============================================================================
   // SOURCE/ERROR CODE EXTRACTION
   // ============================================================================
-  
+
   // Extract error codes/sources from square brackets in the message
   const bracketMatches = message.match(/\[([^\]]+)\]/g);
   if (bracketMatches) {
     for (const match of bracketMatches) {
       const content = match.slice(1, -1); // Remove brackets
-      
+
       // Check if this looks like an error code (hex, alphanumeric, etc.)
-      // Exclude log levels and timestamp formats
-      if (!isLogLevel(content) && 
+      // Exclude log levels, timestamp formats, and thread IDs
+      if (!isLogLevel(content) &&
           !content.match(/^\d{4}-\d{2}-\d{2}/) && // Not a date
           !content.match(/^\d{2}-\d{2}/) && // Not MM-dd format
           !content.match(/^\d{2}:\d{2}:\d{2}/) && // Not time format
+          !content.match(/^\d+$/) && // Not just numbers (likely thread ID)
           content.length > 0) {
         source = content;
         break; // Use the first valid error code found
@@ -204,6 +226,7 @@ function parseLogLine(line: string, index: number): LogEntry | null {
   return {
     id: `log-${index}`,
     timestamp, // This can be null now
+    threadId,
     level: level as LogEntry['level'],
     message: cleanMessage || message,
     source: source || undefined,

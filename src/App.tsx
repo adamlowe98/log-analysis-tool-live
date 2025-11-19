@@ -12,8 +12,8 @@ import { AuditFileUpload } from './components/AuditFileUpload';
 import { AuditSummary } from './components/AuditSummary';
 import { AuditCategorizedTable } from './components/AuditCategorizedTable';
 import { AuditTable } from './components/AuditTable';
-import { parseLogFileWithAI } from './utils/aiLogParser';
-import { parseAuditTrailWithAI } from './utils/aiAuditParser';
+import { parseLogFile, generateLogSummary } from './utils/logParser';
+import { parseAuditTrailCSV, generateAuditSummary } from './utils/auditParser';
 import { LogEntry, LogSummary as LogSummaryType } from './types/log';
 import { AuditEntry, AuditSummary as AuditSummaryType } from './types/audit';
 import { saveAnalysisSession } from './lib/supabase';
@@ -179,14 +179,10 @@ function App() {
    */
   const handleLogFileUpload = async (content: string, fileName: string) => {
     try {
-      console.log('Starting AI-powered log file processing...');
+      console.log('Starting log file processing...');
 
-      const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-      if (!apiKey) {
-        throw new Error('Gemini API key not configured');
-      }
-
-      const { entries: parsedLogs, summary } = await parseLogFileWithAI(content, apiKey);
+      const parsedLogs = parseLogFile(content);
+      const summary = generateLogSummary(parsedLogs);
 
       setLogs(parsedLogs);
       setLogSummary(summary);
@@ -218,14 +214,10 @@ function App() {
    */
   const handleAuditFileUpload = async (content: string, fileName: string) => {
     try {
-      console.log('Starting AI-powered audit trail processing...');
+      console.log('Starting audit trail processing...');
 
-      const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-      if (!apiKey) {
-        throw new Error('Gemini API key not configured');
-      }
-
-      const { entries: parsedEntries, summary } = await parseAuditTrailWithAI(content, apiKey);
+      const parsedEntries = parseAuditTrailCSV(content);
+      const summary = generateAuditSummary(parsedEntries);
 
       setAuditEntries(parsedEntries);
       setAuditSummary(summary);
@@ -234,7 +226,7 @@ function App() {
 
       console.log(`Processed ${parsedEntries.length} audit entries from ${fileName}`);
     } catch (error) {
-      console.error('Error parsing audit trail:', error);
+      console.error('Error parsing audit trail CSV:', error);
       alert('Failed to parse audit trail. Please check the console for details.');
     }
   };
@@ -370,8 +362,8 @@ function App() {
                 </h1>
                 <p className="text-sm text-gray-600 dark:text-gray-300">
                   {appMode === 'logs'
-                    ? 'AI-powered universal log analysis for all Bentley Systems teams'
-                    : 'AI-powered audit trail analysis for security and compliance'
+                    ? 'Universal log analysis for all Bentley Systems teams'
+                    : 'Universal audit trail analysis for security and compliance'
                   }
                 </p>
               </div>
