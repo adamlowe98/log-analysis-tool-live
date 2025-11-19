@@ -37,13 +37,19 @@ export interface LogEntry {
    */
   message: string;
   
-  /** 
+  /**
+   * Thread ID or Process ID (optional)
+   * Extracted from log entries that contain thread/process information
+   */
+  threadId?: string;
+
+  /**
    * Source component or error code (optional)
    * Extracted from bracketed content like [ComponentName] or [ErrorCode]
    */
   source?: string;
-  
-  /** 
+
+  /**
    * Original raw log line
    * Preserved for reference and debugging purposes
    */

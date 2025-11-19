@@ -94,11 +94,12 @@ export function LogTable({ logs }: LogTableProps) {
   };
 
   const exportToCSV = () => {
-    const headers = ['Timestamp', 'Level', 'Message'];
+    const headers = ['Timestamp', 'Thread ID', 'Type', 'Message'];
     const csvContent = [
       headers.join(','),
       ...filteredLogs.map(log => [
         formatTimestamp(log.timestamp),
+        log.threadId || '',
         log.level,
         `"${(log.source ? `[${log.source}] ` : '') + log.message.replace(/"/g, '""')}"` // Escape quotes in CSV
       ].join(','))
@@ -196,7 +197,10 @@ export function LogTable({ logs }: LogTableProps) {
                 Timestamp
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                Level
+                Thread ID
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                Type
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                 Message
@@ -208,6 +212,9 @@ export function LogTable({ logs }: LogTableProps) {
               <tr key={log.id} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200">
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-600 dark:text-gray-300">
                   {formatTimestamp(log.timestamp)}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-600 dark:text-gray-300">
+                  {log.threadId || '-'}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="flex items-center space-x-2">
