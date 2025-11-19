@@ -12,8 +12,8 @@ import { AuditFileUpload } from './components/AuditFileUpload';
 import { AuditSummary } from './components/AuditSummary';
 import { AuditCategorizedTable } from './components/AuditCategorizedTable';
 import { AuditTable } from './components/AuditTable';
-import { parseLogFile, generateLogSummary } from './utils/logParser';
-import { parseAuditTrailCSV, generateAuditSummary } from './utils/auditParser';
+import { parseLogFileWithAI } from './utils/aiLogParser';
+import { parseAuditTrailWithAI } from './utils/aiAuditParser';
 import { LogEntry, LogSummary as LogSummaryType } from './types/log';
 import { AuditEntry, AuditSummary as AuditSummaryType } from './types/audit';
 import { saveAnalysisSession } from './lib/supabase';
@@ -179,11 +179,15 @@ function App() {
    */
   const handleLogFileUpload = async (content: string, fileName: string) => {
     try {
-      console.log('Starting fresh log file processing...');
-      
-      const parsedLogs = parseLogFile(content);
-      const summary = generateLogSummary(parsedLogs);
-      
+      console.log('Starting AI-powered log file processing...');
+
+      const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+      if (!apiKey) {
+        throw new Error('Gemini API key not configured');
+      }
+
+      const { entries: parsedLogs, summary } = await parseLogFileWithAI(content, apiKey);
+
       setLogs(parsedLogs);
       setLogSummary(summary);
       setFilename(fileName);
@@ -191,7 +195,6 @@ function App() {
 
       console.log(`Processed ${parsedLogs.length} log entries from ${fileName}`);
 
-      // Save analysis session metadata to database
       try {
         await saveAnalysisSession({
           filename: fileName,
@@ -206,6 +209,7 @@ function App() {
       }
     } catch (error) {
       console.error('Error parsing log file:', error);
+      alert('Failed to parse log file. Please check the console for details.');
     }
   };
 
@@ -214,11 +218,15 @@ function App() {
    */
   const handleAuditFileUpload = async (content: string, fileName: string) => {
     try {
-      console.log('Starting fresh audit trail processing...');
-      
-      const parsedEntries = parseAuditTrailCSV(content);
-      const summary = generateAuditSummary(parsedEntries);
-      
+      console.log('Starting AI-powered audit trail processing...');
+
+      const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+      if (!apiKey) {
+        throw new Error('Gemini API key not configured');
+      }
+
+      const { entries: parsedEntries, summary } = await parseAuditTrailWithAI(content, apiKey);
+
       setAuditEntries(parsedEntries);
       setAuditSummary(summary);
       setFilename(fileName);
@@ -226,7 +234,8 @@ function App() {
 
       console.log(`Processed ${parsedEntries.length} audit entries from ${fileName}`);
     } catch (error) {
-      console.error('Error parsing audit trail CSV:', error);
+      console.error('Error parsing audit trail:', error);
+      alert('Failed to parse audit trail. Please check the console for details.');
     }
   };
 
@@ -357,12 +366,12 @@ function App() {
                 isTransitioning ? 'opacity-70 transform translate-x-2' : 'opacity-100 transform translate-x-0'
               }`}>
                 <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-                  {appMode === 'logs' ? 'Log Analysis Tool' : 'Audit Trail Investigator'}
+                  {appMode === 'logs' ? 'Bentley Log Analyzer' : 'Bentley Audit Analyzer'}
                 </h1>
                 <p className="text-sm text-gray-600 dark:text-gray-300">
-                  {appMode === 'logs' 
-                    ? 'Upload and analyze log files with detailed insights and visualizations'
-                    : 'Investigate ProjectWise audit trails for missing files and security events'
+                  {appMode === 'logs'
+                    ? 'AI-powered universal log analysis for all Bentley Systems teams'
+                    : 'AI-powered audit trail analysis for security and compliance'
                   }
                 </p>
               </div>

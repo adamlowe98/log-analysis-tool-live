@@ -32,10 +32,8 @@ export function AuditTable({ entries }: AuditTableProps) {
     return entries.filter(entry => 
       entry.action.toLowerCase().includes(searchLower) ||
       entry.user.toLowerCase().includes(searchLower) ||
-      entry.document.toLowerCase().includes(searchLower) ||
-      entry.folder.toLowerCase().includes(searchLower) ||
-      entry.details.toLowerCase().includes(searchLower) ||
-      (entry.application && entry.application.toLowerCase().includes(searchLower))
+      entry.resource.toLowerCase().includes(searchLower) ||
+      entry.details.toLowerCase().includes(searchLower)
     );
   }, [entries, searchTerm]);
 
@@ -136,15 +134,14 @@ export function AuditTable({ entries }: AuditTableProps) {
   };
 
   const exportToCSV = () => {
-    const headers = ['Date/Time', 'Action Name', 'User Name', 'Object Name', 'Path', 'Additional Data'];
+    const headers = ['Timestamp', 'User', 'Action', 'Resource', 'Details'];
     const csvContent = [
       headers.join(','),
       ...filteredEntries.map(entry => [
         formatTimestamp(entry.timestamp),
-        `"${entry.action.replace(/"/g, '""')}"`,
         `"${entry.user.replace(/"/g, '""')}"`,
-        `"${entry.document.replace(/"/g, '""')}"`,
-        `"${entry.folder.replace(/"/g, '""')}"`,
+        `"${entry.action.replace(/"/g, '""')}"`,
+        `"${entry.resource.replace(/"/g, '""')}"`,
         `"${entry.details.replace(/"/g, '""')}"`,
       ].join(','))
     ].join('\n');
@@ -236,22 +233,19 @@ export function AuditTable({ entries }: AuditTableProps) {
           <thead className="bg-gray-50 dark:bg-gray-700 transition-colors duration-200">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider whitespace-nowrap">
-                Date/Time
+                Timestamp
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider whitespace-nowrap">
-                Action Name
+                User
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider whitespace-nowrap">
-                User Name
+                Action
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider whitespace-nowrap">
-                Object Name
+                Resource
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider whitespace-nowrap">
-                Path
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider whitespace-nowrap">
-                Additional Data
+                Details
               </th>
             </tr>
           </thead>
@@ -266,38 +260,24 @@ export function AuditTable({ entries }: AuditTableProps) {
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
                   <div className="flex items-center space-x-2">
-                    <FileText className="h-4 w-4 text-blue-500 dark:text-blue-400" />
-                    <span className="font-medium">{entry.action}</span>
-                  </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
-                  <div className="flex items-center space-x-2">
                     <User className="h-4 w-4 text-green-500 dark:text-green-400" />
                     <span>{entry.user}</span>
                   </div>
                 </td>
-                <td className="px-6 py-4 text-sm text-gray-900 dark:text-gray-100">
-                  <div className="min-w-0 max-w-xs">
-                    {entry.document ? (
-                      <span className="font-mono text-xs bg-gray-100 dark:bg-gray-600 px-2 py-1 rounded block truncate" title={entry.document}>
-                        {entry.document}
-                      </span>
-                    ) : (
-                      <span className="text-gray-400 dark:text-gray-500 italic">No object</span>
-                    )}
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
+                  <div className="flex items-center space-x-2">
+                    <FileText className="h-4 w-4 text-blue-500 dark:text-blue-400" />
+                    <span className="font-medium">{entry.action}</span>
                   </div>
                 </td>
                 <td className="px-6 py-4 text-sm text-gray-900 dark:text-gray-100">
-                  <div className="flex items-center space-x-2 min-w-0 max-w-xs">
-                    {entry.folder ? (
-                      <>
-                        <FolderOpen className="h-4 w-4 text-yellow-500 dark:text-yellow-400 flex-shrink-0" />
-                        <span className="truncate text-xs" title={entry.folder}>
-                          {entry.folder}
-                        </span>
-                      </>
+                  <div className="min-w-0 max-w-xs">
+                    {entry.resource ? (
+                      <span className="font-mono text-xs bg-gray-100 dark:bg-gray-600 px-2 py-1 rounded block truncate" title={entry.resource}>
+                        {entry.resource}
+                      </span>
                     ) : (
-                      <span className="text-gray-400 dark:text-gray-500 italic">No path</span>
+                      <span className="text-gray-400 dark:text-gray-500 italic">-</span>
                     )}
                   </div>
                 </td>

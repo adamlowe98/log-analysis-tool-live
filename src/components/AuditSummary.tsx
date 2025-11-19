@@ -17,30 +17,30 @@ export function AuditSummary({ summary }: AuditSummaryProps) {
       bgColor: 'bg-gray-100 dark:bg-gray-700',
     },
     {
-      name: 'Deletion Events',
-      value: summary.deletionCount.toLocaleString(),
+      name: 'Missing Files',
+      value: summary.fileMissingCount.toLocaleString(),
+      icon: AlertTriangle,
+      color: 'text-red-600 dark:text-red-400',
+      bgColor: 'bg-red-100 dark:bg-red-900/30',
+    },
+    {
+      name: 'Deleted Files',
+      value: summary.fileDeletedCount.toLocaleString(),
       icon: FileX,
       color: 'text-red-600 dark:text-red-400',
       bgColor: 'bg-red-100 dark:bg-red-900/30',
     },
     {
-      name: 'Movement Events',
-      value: summary.movementCount.toLocaleString(),
-      icon: Move,
-      color: 'text-orange-600 dark:text-orange-400',
-      bgColor: 'bg-orange-100 dark:bg-orange-900/30',
-    },
-    {
-      name: 'Check-in/Out',
-      value: summary.checkInOutCount.toLocaleString(),
-      icon: RefreshCw,
+      name: 'File Operations',
+      value: summary.fileOperationsCount.toLocaleString(),
+      icon: FileText,
       color: 'text-blue-600 dark:text-blue-400',
       bgColor: 'bg-blue-100 dark:bg-blue-900/30',
     },
     {
-      name: 'Replacements',
-      value: summary.replacementCount.toLocaleString(),
-      icon: Replace,
+      name: 'Security Events',
+      value: summary.securityEventsCount.toLocaleString(),
+      icon: Users,
       color: 'text-purple-600 dark:text-purple-400',
       bgColor: 'bg-purple-100 dark:bg-purple-900/30',
     },
@@ -165,14 +165,14 @@ export function AuditSummary({ summary }: AuditSummaryProps) {
       )}
 
       {/* Top Users */}
-      {summary.topUsers.length > 0 && (
+      {summary.mostActiveUsers.length > 0 && (
         <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 transition-colors duration-200">
           <div className="flex items-center mb-4">
             <Users className="h-5 w-5 text-gray-500 dark:text-gray-400 mr-2" />
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Most Active Users</h3>
           </div>
           <div className="space-y-3">
-            {summary.topUsers.map((user, index) => (
+            {summary.mostActiveUsers.map((user, index) => (
               <div key={index} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg transition-colors duration-200">
                 <div className="flex items-center space-x-3">
                   <div className="bg-blue-600 dark:bg-blue-500 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold">
@@ -192,22 +192,22 @@ export function AuditSummary({ summary }: AuditSummaryProps) {
       )}
 
       {/* Top Documents */}
-      {summary.topDocuments.length > 0 && (
+      {summary.mostAffectedResources.length > 0 && (
         <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 transition-colors duration-200">
           <div className="flex items-center mb-4">
             <FileText className="h-5 w-5 text-gray-500 dark:text-gray-400 mr-2" />
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Most Affected Documents</h3>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Most Affected Resources</h3>
           </div>
           <div className="space-y-3">
-            {summary.topDocuments.map((doc, index) => (
+            {summary.mostAffectedResources.map((resource, index) => (
               <div key={index} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg transition-colors duration-200">
                 <div className="flex-1">
                   <p className="text-sm font-mono text-gray-800 dark:text-gray-200 truncate pr-4">
-                    {doc.document}
+                    {resource.resource}
                   </p>
                 </div>
                 <span className="text-sm font-semibold text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-600 px-2 py-1 rounded transition-colors duration-200">
-                  {doc.count} events
+                  {resource.count} events
                 </span>
               </div>
             ))}

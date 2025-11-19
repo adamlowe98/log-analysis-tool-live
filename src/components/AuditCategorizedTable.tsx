@@ -1,7 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Search, Filter, Download, FileX, Move, RefreshCw, Replace, MoreHorizontal, AlertTriangle, Clock, User, FolderOpen, FileText } from 'lucide-react';
 import { AuditEntry, AuditCategory, CategorizedAuditEntries } from '../types/audit';
-import { categorizeAllEntries } from '../utils/auditParser';
 import { format } from 'date-fns';
 
 interface AuditCategorizedTableProps {
@@ -15,7 +14,20 @@ export function AuditCategorizedTable({ entries }: AuditCategorizedTableProps) {
   const [pageSize, setPageSize] = useState(25); // Reduced default page size for better readability
 
   // Categorize entries
-  const categorizedEntries = useMemo(() => categorizeAllEntries(entries), [entries]);
+  const categorizedEntries = useMemo(() => {
+    const categorized: CategorizedAuditEntries = {
+      file_missing: [],
+      file_deleted: [],
+      file_operations: [],
+      security_events: [],
+      system_events: [],
+      other: []
+    };
+    entries.forEach(entry => {
+      categorized[entry.category].push(entry);
+    });
+    return categorized;
+  }, [entries]);
 
   // Get entries for selected category
   const filteredEntries = useMemo(() => {
@@ -32,8 +44,7 @@ export function AuditCategorizedTable({ entries }: AuditCategorizedTableProps) {
       categoryEntries = categoryEntries.filter(entry => 
         entry.action.toLowerCase().includes(searchTerm.toLowerCase()) ||
         entry.user.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        entry.document.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        entry.folder.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        entry.resource.toLowerCase().includes(searchTerm.toLowerCase()) ||
         entry.details.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
@@ -50,14 +61,16 @@ export function AuditCategorizedTable({ entries }: AuditCategorizedTableProps) {
 
   const getCategoryIcon = (category: AuditCategory | 'all') => {
     switch (category) {
-      case 'deletion':
-        return <FileX className="h-4 w-4 text-red-500 dark:text-red-400" />;
-      case 'movement':
-        return <Move className="h-4 w-4 text-orange-500 dark:text-orange-400" />;
-      case 'checkinout':
-        return <RefreshCw className="h-4 w-4 text-blue-500 dark:text-blue-400" />;
-      case 'replacement':
-        return <Replace className="h-4 w-4 text-purple-500 dark:text-purple-400" />;
+      case 'file_missing':
+        return <AlertTriangle className="h-4 w-4 text-red-500 dark:text-red-400" />;
+      case 'file_deleted':
+        return <FileX className="h-4 w-4 text-red-600 dark:text-red-500" />;
+      case 'file_operations':
+        return <FileText className="h-4 w-4 text-blue-500 dark:text-blue-400" />;
+      case 'security_events':
+        return <User className="h-4 w-4 text-purple-500 dark:text-purple-400" />;
+      case 'system_events':
+        return <RefreshCw className="h-4 w-4 text-green-500 dark:text-green-400" />;
       case 'other':
         return <MoreHorizontal className="h-4 w-4 text-gray-500 dark:text-gray-400" />;
       default:
@@ -67,14 +80,16 @@ export function AuditCategorizedTable({ entries }: AuditCategorizedTableProps) {
 
   const getCategoryBadgeClass = (category: AuditCategory) => {
     switch (category) {
-      case 'deletion':
+      case 'file_missing':
         return 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 border-red-200 dark:border-red-800';
-      case 'movement':
-        return 'bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300 border-orange-200 dark:border-orange-800';
-      case 'checkinout':
+      case 'file_deleted':
+        return 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 border-red-200 dark:border-red-800';
+      case 'file_operations':
         return 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 border-blue-200 dark:border-blue-800';
-      case 'replacement':
+      case 'security_events':
         return 'bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 border-purple-200 dark:border-purple-800';
+      case 'system_events':
+        return 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 border-green-200 dark:border-green-800';
       default:
         return 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300 border-gray-200 dark:border-gray-600';
     }
@@ -119,10 +134,11 @@ export function AuditCategorizedTable({ entries }: AuditCategorizedTableProps) {
 
   const categories = [
     { id: 'all', name: 'All Events', count: entries.length },
-    { id: 'deletion', name: 'Deletion Events', count: categorizedEntries.deletion.length },
-    { id: 'movement', name: 'Movement Events', count: categorizedEntries.movement.length },
-    { id: 'checkinout', name: 'Check-in/Check-out', count: categorizedEntries.checkinout.length },
-    { id: 'replacement', name: 'Replacement Events', count: categorizedEntries.replacement.length },
+    { id: 'file_missing', name: 'Missing Files', count: categorizedEntries.file_missing.length },
+    { id: 'file_deleted', name: 'Deleted Files', count: categorizedEntries.file_deleted.length },
+    { id: 'file_operations', name: 'File Operations', count: categorizedEntries.file_operations.length },
+    { id: 'security_events', name: 'Security Events', count: categorizedEntries.security_events.length },
+    { id: 'system_events', name: 'System Events', count: categorizedEntries.system_events.length },
     { id: 'other', name: 'Other Events', count: categorizedEntries.other.length },
   ];
 
