@@ -12,7 +12,7 @@ import { AuditFileUpload } from './components/AuditFileUpload';
 import { AuditSummary } from './components/AuditSummary';
 import { AuditCategorizedTable } from './components/AuditCategorizedTable';
 import { AuditTable } from './components/AuditTable';
-import { parseLogFileHybrid } from './utils/hybridLogParser';
+import { parseLogFileWithAI } from './utils/aiLogParser';
 import { parseAuditTrailCSV, generateAuditSummary } from './utils/auditParser';
 import { LogEntry, LogSummary as LogSummaryType } from './types/log';
 import { AuditEntry, AuditSummary as AuditSummaryType } from './types/audit';
@@ -181,12 +181,12 @@ function App() {
     try {
       console.log('Starting AI-enhanced log file processing...');
 
-      const apiKey = import.meta.env.VITE_OPENAI_API_KEY;
+      const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
       if (!apiKey) {
-        throw new Error('OpenAI API key not configured. Please add VITE_OPENAI_API_KEY to your .env file.');
+        throw new Error('Gemini API key not configured. Please add VITE_GEMINI_API_KEY to your .env file.');
       }
 
-      const { entries: parsedLogs, summary } = await parseLogFileHybrid(content, apiKey);
+      const { entries: parsedLogs, summary } = await parseLogFileWithAI(content, apiKey);
 
       setLogs(parsedLogs);
       setLogSummary(summary);
