@@ -13,6 +13,7 @@ import { AuditSummary } from './components/AuditSummary';
 import { AuditCategorizedTable } from './components/AuditCategorizedTable';
 import { AuditTable } from './components/AuditTable';
 import { parseLogFileWithAI } from './utils/aiLogParser';
+import { parseLogFile, generateLogSummary as generateLogSummaryLocal } from './utils/logParser';
 import { parseAuditTrailCSV, generateAuditSummary } from './utils/auditParser';
 import { LogEntry, LogSummary as LogSummaryType } from './types/log';
 import { AuditEntry, AuditSummary as AuditSummaryType } from './types/audit';
@@ -179,14 +180,20 @@ function App() {
    */
   const handleLogFileUpload = async (content: string, fileName: string) => {
     try {
-      console.log('Starting AI-enhanced log file processing...');
-
       const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-      if (!apiKey) {
-        throw new Error('Gemini API key not configured. Please add VITE_GEMINI_API_KEY to your .env file.');
-      }
+      let parsedLogs: LogEntry[];
+      let summary: LogSummaryType;
 
-      const { entries: parsedLogs, summary } = await parseLogFileWithAI(content, apiKey);
+      if (apiKey) {
+        console.log('Using AI-enhanced log file processing...');
+        const result = await parseLogFileWithAI(content, apiKey);
+        parsedLogs = result.entries;
+        summary = result.summary;
+      } else {
+        console.log('Using standard log file processing (no AI key configured)...');
+        parsedLogs = parseLogFile(content);
+        summary = generateLogSummaryLocal(parsedLogs);
+      }
 
       setLogs(parsedLogs);
       setLogSummary(summary);
