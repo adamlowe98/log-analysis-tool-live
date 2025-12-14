@@ -13,7 +13,6 @@ import { AuditSummary } from './components/AuditSummary';
 import { AuditCategorizedTable } from './components/AuditCategorizedTable';
 import { AuditTable } from './components/AuditTable';
 import { parseLogFileWithAI } from './utils/aiLogParser';
-import { parseLogFile, generateLogSummary as generateLogSummaryLocal } from './utils/logParser';
 import { parseAuditTrailCSV, generateAuditSummary } from './utils/auditParser';
 import { LogEntry, LogSummary as LogSummaryType } from './types/log';
 import { AuditEntry, AuditSummary as AuditSummaryType } from './types/audit';
@@ -180,20 +179,14 @@ function App() {
    */
   const handleLogFileUpload = async (content: string, fileName: string) => {
     try {
-      const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-      let parsedLogs: LogEntry[];
-      let summary: LogSummaryType;
+      console.log('Starting AI-powered log file processing...');
 
-      if (apiKey) {
-        console.log('Using AI-enhanced log file processing...');
-        const result = await parseLogFileWithAI(content, apiKey);
-        parsedLogs = result.entries;
-        summary = result.summary;
-      } else {
-        console.log('Using standard log file processing (no AI key configured)...');
-        parsedLogs = parseLogFile(content);
-        summary = generateLogSummaryLocal(parsedLogs);
+      const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+      if (!apiKey) {
+        throw new Error('Gemini API key required. Get your free key at: https://aistudio.google.com/app/apikey and add it to the .env file as VITE_GEMINI_API_KEY');
       }
+
+      const { entries: parsedLogs, summary } = await parseLogFileWithAI(content, apiKey);
 
       setLogs(parsedLogs);
       setLogSummary(summary);
