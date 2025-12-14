@@ -5,6 +5,17 @@ export async function parseLogFileWithAI(content: string, apiKey: string): Promi
   const genAI = new GoogleGenerativeAI(apiKey);
   const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
 
+  const maxContentLength = 100000;
+  let processContent = content;
+  if (content.length > maxContentLength) {
+    const lines = content.split('\n');
+    const sampleSize = Math.floor(lines.length * 0.3);
+    const startLines = lines.slice(0, Math.floor(sampleSize / 2));
+    const endLines = lines.slice(-Math.floor(sampleSize / 2));
+    processContent = [...startLines, '... [MIDDLE SECTION TRUNCATED] ...', ...endLines].join('\n');
+    console.log(`Large log file detected (${content.length} chars). Sampling ${sampleSize} lines for analysis.`);
+  }
+
   const prompt = `You are a universal log file parser for Bentley Systems. Analyze this log file and extract structured data.
 
 CRITICAL INSTRUCTIONS:
@@ -52,21 +63,46 @@ CRITICAL INSTRUCTIONS:
 }
 
 LOG FILE CONTENT:
-${content}
+${processContent}
 
 Return ONLY the JSON object, no markdown, no explanations.`;
 
   try {
     const result = await model.generateContent(prompt);
     const response = await result.response;
-    const text = response.text();
+    let text = response.text();
+
+    text = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
 
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
       throw new Error('No valid JSON found in AI response');
     }
 
-    const parsed = JSON.parse(jsonMatch[0]);
+    let jsonText = jsonMatch[0];
+
+    const braceCount = (jsonText.match(/\{/g) || []).length;
+    const closeBraceCount = (jsonText.match(/\}/g) || []).length;
+    if (braceCount > closeBraceCount) {
+      jsonText += '}'.repeat(braceCount - closeBraceCount);
+    }
+
+    const bracketCount = (jsonText.match(/\[/g) || []).length;
+    const closeBracketCount = (jsonText.match(/\]/g) || []).length;
+    if (bracketCount > closeBracketCount) {
+      jsonText += ']'.repeat(bracketCount - closeBracketCount);
+    }
+
+    jsonText = jsonText.replace(/,(\s*[}\]])/g, '$1');
+
+    let parsed;
+    try {
+      parsed = JSON.parse(jsonText);
+    } catch (parseError) {
+      console.error('JSON parse error, attempting cleanup:', parseError);
+      jsonText = jsonText.replace(/,\s*}/g, '}').replace(/,\s*]/g, ']');
+      parsed = JSON.parse(jsonText);
+    }
 
     const entries: LogEntry[] = parsed.entries.map((entry: any, index: number) => ({
       id: `log-${index}`,
