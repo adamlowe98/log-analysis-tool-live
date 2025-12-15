@@ -112,7 +112,12 @@ function App() {
    * Reset operation state - provides user feedback during data clearing
    */
   const [isResetting, setIsResetting] = useState(false);
-  
+
+  /**
+   * Parsing progress state
+   */
+  const [parsingProgress, setParsingProgress] = useState<{ progress: number; message: string } | null>(null);
+
   /**
    * Additional report content from AI assistant
    */
@@ -180,18 +185,30 @@ function App() {
   const handleLogFileUpload = async (content: string, fileName: string) => {
     try {
       console.log('Starting AI-powered log file processing...');
+      setParsingProgress({ progress: 0, message: 'Initializing parser...' });
 
       const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
       if (!apiKey) {
+        setParsingProgress(null);
         throw new Error('Gemini API key required. Get your free key at: https://aistudio.google.com/app/apikey and add it to the .env file as VITE_GEMINI_API_KEY');
       }
 
-      const { entries: parsedLogs, summary } = await parseLogFileWithAI(content, apiKey);
+      const { entries: parsedLogs, summary } = await parseLogFileWithAI(
+        content,
+        apiKey,
+        (progress, message) => {
+          setParsingProgress({ progress, message });
+        }
+      );
+
+      setParsingProgress({ progress: 100, message: 'Finalizing...' });
 
       setLogs(parsedLogs);
       setLogSummary(summary);
       setFilename(fileName);
       setActiveTab('summary');
+
+      setParsingProgress(null);
 
       console.log(`Processed ${parsedLogs.length} log entries from ${fileName}`);
 
@@ -208,6 +225,7 @@ function App() {
         console.error('Failed to save analysis session:', dbError);
       }
     } catch (error) {
+      setParsingProgress(null);
       console.error('Error parsing log file:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       alert(`Failed to parse log file: ${errorMessage}`);
@@ -474,6 +492,44 @@ function App() {
           </div>
         )}
         
+        {/* Parsing Progress Overlay */}
+        {parsingProgress && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center">
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-8 max-w-md w-full mx-4">
+              <div className="flex items-center space-x-4 mb-6">
+                <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-600 border-t-transparent"></div>
+                <div>
+                  <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
+                    Analyzing Log File
+                  </h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                    {parsingProgress.message}
+                  </p>
+                </div>
+              </div>
+
+              <div className="relative h-3 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                <div
+                  className="absolute inset-y-0 left-0 bg-gradient-to-r from-blue-500 to-blue-600 transition-all duration-300 ease-out rounded-full"
+                  style={{ width: `${parsingProgress.progress}%` }}
+                >
+                  <div className="absolute inset-0 bg-white/20 animate-pulse"></div>
+                </div>
+              </div>
+
+              <div className="mt-3 text-center">
+                <span className="text-lg font-semibold text-blue-600 dark:text-blue-400">
+                  {parsingProgress.progress}%
+                </span>
+              </div>
+
+              <p className="text-xs text-gray-500 dark:text-gray-400 text-center mt-4">
+                Please wait while AI analyzes your log file...
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Show file upload when no data is loaded */}
         {!hasData ? (
           <div className={`flex items-center justify-center min-h-96 transition-all duration-500 ${
@@ -526,7 +582,20 @@ function App() {
               }`}>
                 {activeTab === 'summary' && currentSummary && (
                   appMode === 'logs' ? (
-                    <LogSummary summary={logSummary!} />
+                    <LogSummary
+                      summary={logSummary!}
+                      onViewInTable={(logId) => {
+                        setActiveTab('table');
+                        setTimeout(() => {
+                          const element = document.getElementById(logId);
+                          if (element) {
+                            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            element.classList.add('highlight-flash');
+                            setTimeout(() => element.classList.remove('highlight-flash'), 2000);
+                          }
+                        }, 300);
+                      }}
+                    />
                   ) : (
                     <AuditSummary summary={auditSummary!} />
                   )

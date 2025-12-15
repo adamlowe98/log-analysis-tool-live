@@ -33,14 +33,19 @@ async function parseJSONSafely(text: string): Promise<any> {
   }
 }
 
-export async function parseLogFileWithAI(content: string, apiKey: string): Promise<{ entries: LogEntry[], summary: LogSummary }> {
+export async function parseLogFileWithAI(
+  content: string,
+  apiKey: string,
+  onProgress?: (progress: number, message: string) => void
+): Promise<{ entries: LogEntry[], summary: LogSummary }> {
   const genAI = new GoogleGenerativeAI(apiKey);
   const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
 
   console.log('Starting chunked AI log parsing...');
+  onProgress?.(0, 'Preparing log file for analysis...');
 
   const lines = content.split('\n').filter(line => line.trim());
-  const chunkSize = 50;
+  const chunkSize = 100;
   const allEntries: LogEntry[] = [];
 
   const totalChunks = Math.ceil(lines.length / chunkSize);
@@ -49,6 +54,9 @@ export async function parseLogFileWithAI(content: string, apiKey: string): Promi
   for (let i = 0; i < lines.length; i += chunkSize) {
     const chunk = lines.slice(i, Math.min(i + chunkSize, lines.length));
     const chunkNumber = Math.floor(i / chunkSize) + 1;
+
+    const progress = Math.round((chunkNumber / totalChunks) * 100);
+    onProgress?.(progress, `Processing chunk ${chunkNumber} of ${totalChunks}...`);
 
     const chunkPrompt = `Parse these ${chunk.length} log lines. Extract timestamp, threadId, level (ERROR/WARN/INFO/DEBUG), and message for each line.
 
@@ -84,7 +92,7 @@ ${chunk.join('\n')}`;
 
       console.log(`Processed chunk ${chunkNumber}/${totalChunks}`);
 
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise(resolve => setTimeout(resolve, 50));
     } catch (error) {
       console.error(`Error processing chunk ${chunkNumber}:`, error);
       chunk.forEach((line, idx) => {

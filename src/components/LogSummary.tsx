@@ -1,13 +1,14 @@
 import React from 'react';
-import { AlertTriangle, CheckCircle, Info, Bug, AlertCircle, Clock, FileText } from 'lucide-react';
+import { AlertTriangle, CheckCircle, Info, Bug, AlertCircle, Clock, FileText, ExternalLink } from 'lucide-react';
 import { LogSummary as LogSummaryType } from '../types/log';
 import { format } from 'date-fns';
 
 interface LogSummaryProps {
   summary: LogSummaryType;
+  onViewInTable?: (logId: string) => void;
 }
 
-export function LogSummary({ summary }: LogSummaryProps) {
+export function LogSummary({ summary, onViewInTable }: LogSummaryProps) {
   const stats = [
     {
       name: 'Total Entries',
@@ -130,18 +131,43 @@ export function LogSummary({ summary }: LogSummaryProps) {
             <h3 className="text-lg font-semibold text-red-900 dark:text-red-300">Critical Errors</h3>
           </div>
           <div className="space-y-3">
-            {summary.criticalErrors.slice(0, 5).map((error) => (
-              <div key={error.id} className="bg-red-50 dark:bg-red-900/20 rounded-lg p-3 border border-red-100 dark:border-red-800 transition-colors duration-200">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <p className="text-sm font-mono text-red-800 dark:text-red-300 break-all">
+            {summary.criticalErrors.slice(0, 10).map((error) => (
+              <div key={error.id} className="bg-red-50 dark:bg-red-900/20 rounded-lg p-4 border border-red-100 dark:border-red-800 transition-colors duration-200 hover:bg-red-100 dark:hover:bg-red-900/30">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start gap-2 mb-2">
+                      <span className="inline-block px-2 py-1 text-xs font-semibold bg-red-200 dark:bg-red-900 text-red-900 dark:text-red-200 rounded">
+                        ERROR
+                      </span>
+                      {error.threadId && (
+                        <span className="inline-block px-2 py-1 text-xs font-mono bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-200 rounded">
+                          Thread: {error.threadId}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-sm font-mono text-red-800 dark:text-red-300 break-words whitespace-pre-wrap">
                       {error.message}
                     </p>
-                    <p className="text-xs text-red-600 dark:text-red-400 mt-1">
-                      {error.timestamp ? format(error.timestamp, 'yyyy-MM-dd HH:mm:ss') : 'No timestamp'}
-                      {error.source && ` • ${error.source}`}
-                    </p>
+                    <div className="flex items-center gap-3 mt-2 text-xs text-red-600 dark:text-red-400">
+                      <span className="flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        {error.timestamp ? format(error.timestamp, 'yyyy-MM-dd HH:mm:ss.SSS') : 'No timestamp'}
+                      </span>
+                      {error.source && (
+                        <span>Source: {error.source}</span>
+                      )}
+                    </div>
                   </div>
+                  {onViewInTable && (
+                    <button
+                      onClick={() => onViewInTable(error.id)}
+                      className="flex-shrink-0 flex items-center gap-1 px-3 py-2 text-xs font-medium text-red-700 dark:text-red-300 bg-red-100 dark:bg-red-900/50 hover:bg-red-200 dark:hover:bg-red-900 rounded-lg transition-colors duration-200"
+                      title="View in Log Table"
+                    >
+                      <ExternalLink className="h-3 w-3" />
+                      <span>View</span>
+                    </button>
+                  )}
                 </div>
               </div>
             ))}

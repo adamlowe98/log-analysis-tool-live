@@ -2,9 +2,20 @@
 @tailwind components;
 @tailwind utilities;
 
-@layer utilities {
-  .overflow-wrap-anywhere {
-    overflow-wrap: anywhere;
-    word-break: break-word;
-  }
+@keyframes highlight-flash {
+  0%, 100% { background-color: transparent; }
+  50% { background-color: rgb(254, 202, 202); }
+}
+
+@keyframes highlight-flash-dark {
+  0%, 100% { background-color: transparent; }
+  50% { background-color: rgb(127, 29, 29); }
+}
+
+.highlight-flash {
+  animation: highlight-flash 2s ease-in-out;
+}
+
+.dark .highlight-flash {
+  animation: highlight-flash-dark 2s ease-in-out;
 }

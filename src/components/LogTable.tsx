@@ -209,7 +209,7 @@ export function LogTable({ logs }: LogTableProps) {
           </thead>
           <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700 transition-colors duration-200">
             {paginatedLogs.map((log) => (
-              <tr key={log.id} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200">
+              <tr key={log.id} id={log.id} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200">
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-600 dark:text-gray-300">
                   {formatTimestamp(log.timestamp)}
                 </td>
